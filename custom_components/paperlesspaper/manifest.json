@@ -1,0 +1,10 @@
+{
+  "domain": "paperlesspaper",
+  "name": "paperlesspaper",
+  "version": "0.1.0",
+  "codeowners": ["@paperlesspaper-ha"],
+  "config_flow": true,
+  "documentation": "https://github.com/paperlesspaper/paperlesspaper-ha",
+  "iot_class": "cloud_polling",
+  "requirements": ["aiohttp>=3.9.0"]
+}

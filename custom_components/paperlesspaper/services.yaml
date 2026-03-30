@@ -1,0 +1,14 @@
+upload_image:
+  name: Upload image
+  description: Upload an image to a paperlesspaper ePaper display.
+  target:
+    device:
+      integration: paperlesspaper
+  fields:
+    media_content_id:
+      name: Media content ID
+      description: The media source path of the image to upload (e.g. media-source://media_source/local/image.jpg).
+      required: true
+      example: "media-source://media_source/local/image.jpg"
+      selector:
+        text:

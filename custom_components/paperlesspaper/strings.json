@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up paperlesspaper",
+        "description": "Enter your API Key from the paperlesspaper app.",
+        "data": {
+          "api_key": "API Key"
+        }
+      },
+      "organization": {
+        "title": "Select organization",
+        "data": {
+          "organization_id": "Organization"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid API Key",
+      "cannot_connect": "Connection failed",
+      "no_organizations": "No organization found. Please use the paperlesspaper app first."
+    },
+    "abort": {
+      "already_configured": "This organization is already configured."
+    }
+  }
+}
