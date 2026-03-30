@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "paperlesspaper einrichten",
+        "description": "Gib deinen API Key aus der paperlesspaper App ein.",
+        "data": {
+          "api_key": "API Key"
+        }
+      },
+      "organization": {
+        "title": "Gruppe auswählen",
+        "data": {
+          "organization_id": "Gruppe"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ungültiger API Key",
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "no_organizations": "Keine Gruppe gefunden. Stelle sicher, dass die paperlesspaper App verwendet werden kann und mindestens eine Gruppe angezeigt wird."
+    },
+    "abort": {
+      "already_configured": "Diese Gruppe ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "paperlesspaper Optionen",
+        "data": {
+          "polling_interval": "Abfrageintervall (Sekunden)"
+        }
+      }
+    }
+  }
+}
