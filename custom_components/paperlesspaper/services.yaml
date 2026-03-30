@@ -1,10 +1,14 @@
 upload_image:
   name: Upload image
   description: Upload an image to a paperlesspaper ePaper display.
-  target:
-    device:
-      integration: paperlesspaper
   fields:
+    device_id:
+      name: Device
+      description: The paperlesspaper ePaper display to upload to.
+      required: true
+      selector:
+        device:
+          integration: paperlesspaper
     media_content_id:
       name: Image
       description: Select an image from your media library.
