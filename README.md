@@ -83,6 +83,15 @@ For each ePaper device the integration creates:
 | `binary_sensor.<device>_reachable` | `on` if the device is reachable |
 | `binary_sensor.<device>_update_pending` | `on` if a firmware update is available |
 
+### Buttons
+
+| Entity | Description |
+|---|---|
+| `button.<device>_reboot` | Remotely reboot the ePaper device |
+| `button.<device>__reset_sensors` | Reset all sensors on the device to factory defaults |
+
+> **Warning:** The reset button wipes all variables and memory on the device and triggers a reboot. Use with caution.
+
 ---
 
 ## Actions
