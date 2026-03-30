@@ -1,4 +1,5 @@
 """Binary sensor platform for paperlesspaper."""
+
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import (
@@ -25,10 +26,12 @@ async def async_setup_entry(
 
     entities = []
     for device in coordinator.data:
-        entities.extend([
-            PaperlessDeviceReachableSensor(coordinator, device),
-            PaperlessUpdatePendingSensor(coordinator, device),
-        ])
+        entities.extend(
+            [
+                PaperlessDeviceReachableSensor(coordinator, device),
+                PaperlessUpdatePendingSensor(coordinator, device),
+            ]
+        )
 
     async_add_entities(entities)
 
@@ -49,13 +52,14 @@ class PaperlessDeviceReachableSensor(CoordinatorEntity, BinarySensorEntity):
     """Binary sensor for device reachability via ping."""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+    _attr_has_entity_name = True
+    _attr_translation_key = "reachable"
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self._device_id = device["id"]
         self._attr_unique_id = f"{device['id']}_reachable"
-        self._attr_name = f"{device['meta'].get('name', device['id'])} Reachable"
         self._attr_icon = "mdi:wifi-check"
         self._attr_device_info = _device_info(device)
 
@@ -79,13 +83,14 @@ class PaperlessUpdatePendingSensor(CoordinatorEntity, BinarySensorEntity):
     """Binary sensor: True if a firmware update is pending."""
 
     _attr_device_class = BinarySensorDeviceClass.UPDATE
+    _attr_has_entity_name = True
+    _attr_translation_key = "update_pending"
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self._device_id = device["id"]
         self._attr_unique_id = f"{device['id']}_update_pending"
-        self._attr_name = f"{device['meta'].get('name', device['id'])} Update Pending"
         self._attr_icon = "mdi:update"
         self._attr_device_info = _device_info(device)
 
@@ -99,13 +104,7 @@ class PaperlessUpdatePendingSensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        """Return True if firmware update is pending.
-
-        API values:
-        - 'update_ok'      → no update pending → False
-        - 'update_pending' → update available  → True
-        - None             → unknown           → None
-        """
+        """Return True if firmware update is pending."""
         if self._device is None:
             return None
         val = self._device.get("update_pending")

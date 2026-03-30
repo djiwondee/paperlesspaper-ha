@@ -1,4 +1,5 @@
 """Sensor platform for paperlesspaper."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -24,13 +25,15 @@ async def async_setup_entry(
 
     entities = []
     for device in coordinator.data:
-        entities.extend([
-            PaperlessPictureSyncedSensor(coordinator, device),
-            PaperlessBatLevelSensor(coordinator, device),
-            PaperlessNextSyncSensor(coordinator, device),
-            PaperlessSleepTimeSensor(coordinator, device),
-            PaperlessSleepTimePredictSensor(coordinator, device),
-        ])
+        entities.extend(
+            [
+                PaperlessPictureSyncedSensor(coordinator, device),
+                PaperlessBatLevelSensor(coordinator, device),
+                PaperlessNextSyncSensor(coordinator, device),
+                PaperlessSleepTimeSensor(coordinator, device),
+                PaperlessSleepTimePredictSensor(coordinator, device),
+            ]
+        )
 
     async_add_entities(entities)
 
@@ -52,19 +55,20 @@ class PaperlessBaseSensor(CoordinatorEntity, SensorEntity):
 
     _field: str
     _attr_icon: str = "mdi:image-frame"
+    _attr_has_entity_name = True
 
     def __init__(
         self,
         coordinator: PaperlessCoordinator,
         device: dict,
         unique_suffix: str,
-        name_suffix: str,
+        translation_key: str,
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self._device_id = device["id"]
         self._attr_unique_id = f"{device['id']}_{unique_suffix}"
-        self._attr_name = f"{device['meta'].get('name', device['id'])} {name_suffix}"
+        self._attr_translation_key = translation_key
         self._attr_device_info = _device_info(device)
 
     @property
@@ -91,11 +95,11 @@ class PaperlessPictureSyncedSensor(PaperlessBaseSensor):
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
-        super().__init__(coordinator, device, "picture_synced", "Picture Synced")
+        super().__init__(coordinator, device, "picture_synced", "picture_synced")
 
 
 class PaperlessBatLevelSensor(PaperlessBaseSensor):
-    """Sensor: battery level (raw mV value from API)."""
+    """Sensor: battery level."""
 
     _field = "bat_level"
     _attr_icon = "mdi:battery"
@@ -103,7 +107,7 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
-        super().__init__(coordinator, device, "bat_level", "Battery Level")
+        super().__init__(coordinator, device, "bat_level", "bat_level")
 
     @property
     def native_value(self) -> float | None:
@@ -115,7 +119,7 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
             return None
         try:
             return round(int(val) / 1000, 2)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
 
@@ -128,7 +132,7 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
-        super().__init__(coordinator, device, "next_device_sync", "Next Sync")
+        super().__init__(coordinator, device, "next_device_sync", "next_device_sync")
 
     @property
     def native_value(self) -> datetime | None:
@@ -140,7 +144,7 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
             return None
         try:
             return datetime.fromisoformat(iso_str)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
 
@@ -153,7 +157,7 @@ class PaperlessSleepTimeSensor(PaperlessBaseSensor):
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
-        super().__init__(coordinator, device, "sleep_time", "Sleep Time")
+        super().__init__(coordinator, device, "sleep_time", "sleep_time")
 
 
 class PaperlessSleepTimePredictSensor(PaperlessBaseSensor):
@@ -165,4 +169,6 @@ class PaperlessSleepTimePredictSensor(PaperlessBaseSensor):
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
-        super().__init__(coordinator, device, "sleep_time_predict", "Sleep Time Predicted")
+        super().__init__(
+            coordinator, device, "sleep_time_predict", "sleep_time_predict"
+        )

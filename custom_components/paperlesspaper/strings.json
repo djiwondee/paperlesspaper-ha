@@ -33,5 +33,40 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "picture_synced": {
+        "name": "Picture Synced"
+      },
+      "bat_level": {
+        "name": "Battery Level"
+      },
+      "next_device_sync": {
+        "name": "Next Sync"
+      },
+      "sleep_time": {
+        "name": "Sleep Time"
+      },
+      "sleep_time_predict": {
+        "name": "Sleep Time Predicted"
+      }
+    },
+    "binary_sensor": {
+      "reachable": {
+        "name": "Reachable"
+      },
+      "update_pending": {
+        "name": "Update Pending"
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Reboot"
+      },
+      "reset_sensors": {
+        "name": "Reset Sensors"
+      }
+    }
   }
 }

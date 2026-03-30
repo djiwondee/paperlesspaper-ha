@@ -1,4 +1,5 @@
 """Button platform for paperlesspaper."""
+
 from __future__ import annotations
 
 import logging
@@ -30,10 +31,12 @@ async def async_setup_entry(
 
     entities = []
     for device in coordinator.data:
-        entities.extend([
-            PaperlessRebootButton(coordinator, device),
-            PaperlessResetButton(coordinator, device),
-        ])
+        entities.extend(
+            [
+                PaperlessRebootButton(coordinator, device),
+                PaperlessResetButton(coordinator, device),
+            ]
+        )
 
     async_add_entities(entities)
 
@@ -55,23 +58,24 @@ class PaperlessBaseButton(CoordinatorEntity, ButtonEntity):
 
     _endpoint: str
     _action_name: str
+    _attr_has_entity_name = True
 
     def __init__(
         self,
         coordinator: PaperlessCoordinator,
         device: dict,
         unique_suffix: str,
-        name_suffix: str,
+        translation_key: str,
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
         self._device_id = device["id"]
         self._attr_unique_id = f"{device['id']}_{unique_suffix}"
-        self._attr_name = f"{device['meta'].get('name', device['id'])} {name_suffix}"
+        self._attr_translation_key = translation_key
         self._attr_device_info = _device_info(device)
 
     async def async_press(self) -> None:
-        """Handle button press — call the API endpoint."""
+        """Handle button press."""
         session = async_get_clientsession(self.hass)
         try:
             async with session.post(
@@ -115,7 +119,7 @@ class PaperlessRebootButton(PaperlessBaseButton):
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
-        super().__init__(coordinator, device, "reboot", "Reboot")
+        super().__init__(coordinator, device, "reboot", "reboot")
 
 
 class PaperlessResetButton(PaperlessBaseButton):
@@ -127,4 +131,4 @@ class PaperlessResetButton(PaperlessBaseButton):
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
-        super().__init__(coordinator, device, "reset", "Reset Sensors")
+        super().__init__(coordinator, device, "reset", "reset_sensors")

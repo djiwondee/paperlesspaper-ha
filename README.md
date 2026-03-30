@@ -70,6 +70,19 @@ After setup you can adjust the polling interval under **Settings → Devices & S
 | polling_interval | 300s | 60s | 3600s | How often HA polls the paperlesspaper API for device status updates |
 
 > **Note:** After changing the polling interval the integration reloads automatically.
+
+### Localization
+
+The integration supports multiple languages. Entity names, buttons, and configuration dialogs are automatically displayed in the language set in your Home Assistant user preferences. To change the language go to **Settings → Profile → Language**.
+
+Currently supported languages:
+
+| Language | Code |
+| --- | --- |
+| English | en |
+| German | de |
+
+> **Note:**  After changing the language, don't miss to clear you browser cache.
 ---
 
 ## Entities
