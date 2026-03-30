@@ -1,8 +1,9 @@
 """DataUpdateCoordinator for paperlesspaper."""
 from __future__ import annotations
 
+import json
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import aiohttp
 
@@ -69,13 +70,17 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             data = await resp.json()
             return data.get("results", [])
 
-    async def _create_paper(self, device_id: str) -> str:
-        """Create a new paper for a device, return its id."""
+    async def _create_paper(self, device_id: str) -> str | None:
+        """Create a new paper for a device.
+
+        Note: API returns HTTP 500 even on success (v1 bug).
+        We parse the response body regardless of status code.
+        """
         payload = {
             "deviceId": device_id,
             "kind": "image",
-            "meta": "",
             "organization": self.organization_id,
+            "meta": "",
         }
         _LOGGER.debug("Creating paper with payload: %s", payload)
         async with self._session.post(
@@ -90,14 +95,29 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                 resp.status,
                 response_text,
             )
-            resp.raise_for_status()
-            import json
-            data = json.loads(response_text)
-            paper_id = data["id"]
-            _LOGGER.info("Created new paper %s for device %s", paper_id, device_id)
-            return paper_id
+            try:
+                data = json.loads(response_text)
+                paper_id = data.get("id")
+                if paper_id:
+                    _LOGGER.info(
+                        "Created new paper %s for device %s (HTTP %s)",
+                        paper_id,
+                        device_id,
+                        resp.status,
+                    )
+                    return paper_id
+            except (json.JSONDecodeError, KeyError):
+                pass
 
-    async def _ensure_paper_id(self, device_id: str) -> str | None:
+            _LOGGER.error(
+                "Failed to create paper for device %s: HTTP %s body=%s",
+                device_id,
+                resp.status,
+                response_text,
+            )
+            return None
+
+    async def _ensure_paper_id(self, device_id: str, device: dict) -> str | None:
         """Ensure a valid paper_id exists for a device."""
         stored_paper_id = self.get_paper_id(device_id)
 
@@ -105,9 +125,6 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             try:
                 papers = await self._fetch_papers_for_device(device_id)
                 paper_ids_on_api = [p["id"] for p in papers]
-                _LOGGER.debug(
-                    "Papers on API for device %s: %s", device_id, paper_ids_on_api
-                )
 
                 if stored_paper_id in paper_ids_on_api:
                     _LOGGER.debug(
@@ -118,43 +135,91 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                     return stored_paper_id
 
                 _LOGGER.warning(
-                    "Stored paper_id %s no longer exists, creating new",
+                    "Stored paper_id %s no longer exists on API, will use device paper field",
                     stored_paper_id,
                 )
             except aiohttp.ClientError as err:
                 _LOGGER.warning("Could not validate paper_id: %s", err)
                 return stored_paper_id
 
-        try:
-            paper_id = await self._create_paper(device_id)
-            await self._store_paper_id(device_id, paper_id)
-            return paper_id
-        except aiohttp.ClientResponseError as err:
-            _LOGGER.error(
-                "Failed to create paper for device %s: HTTP %s", device_id, err.status
+        # Use paper field from device response as fallback
+        device_paper_id = device.get("paper")
+        if device_paper_id:
+            _LOGGER.info(
+                "Using paper %s from device response for device %s",
+                device_paper_id,
+                device_id,
             )
+            await self._store_paper_id(device_id, device_paper_id)
+            return device_paper_id
+
+        # Last resort: create new paper
+        _LOGGER.warning("No paper found for device %s, creating new", device_id)
+        paper_id = await self._create_paper(device_id)
+        if paper_id:
+            await self._store_paper_id(device_id, paper_id)
+        return paper_id
+
+    @staticmethod
+    def _ms_timestamp_to_datetime(ms_timestamp: int | None) -> str | None:
+        """Convert a millisecond epoch timestamp to ISO datetime string."""
+        if ms_timestamp is None:
             return None
-        except Exception as err:
-            _LOGGER.error("Unexpected error creating paper: %s", err)
+        try:
+            return datetime.fromtimestamp(
+                ms_timestamp / 1000, tz=timezone.utc
+            ).isoformat()
+        except (ValueError, OSError):
             return None
 
-    async def _ping_device(self, device_id: str) -> bool:
-        """Ping a single device, return True if reachable."""
+    async def _ping_device(self, device_id: str) -> dict:
+        """Ping device with dataResponse=false.
+
+        Returns enriched device data including:
+        - reachable: bool
+        - iotDevice fields (fwVersion, serialNumber, ...)
+        - deviceStatus fields (pictureSynced, batLevel, nextDeviceSync, ...)
+        """
         try:
             async with self._session.get(
                 f"{API_BASE_URL}/devices/ping/{device_id}",
                 headers=self._headers,
                 params={"dataResponse": "false"},
-                timeout=aiohttp.ClientTimeout(total=10),
+                timeout=aiohttp.ClientTimeout(total=15),
             ) as resp:
-                reachable = resp.status == 200
-                _LOGGER.debug("Ping %s -> %s", device_id, reachable)
-                return reachable
-        except aiohttp.ClientError:
-            return False
+                if resp.status != 200:
+                    _LOGGER.debug("Ping %s -> not reachable (HTTP %s)", device_id, resp.status)
+                    return {"reachable": False}
+
+                data = await resp.json()
+                ping = data.get("ping", {})
+                device = data.get("device", {})
+                iot = device.get("iotDevice", {})
+                status = device.get("deviceStatus", {})
+
+                next_sync_ms = status.get("nextDeviceSync")
+
+                result = {
+                    "reachable": ping.get("success", False),
+                    "fw_version": iot.get("fwVersion"),
+                    "fw_version_latest": iot.get("fwVersionLatest"),
+                    "serial_number": iot.get("serialNumber"),
+                    "picture_synced": status.get("pictureSynced"),
+                    "bat_level": status.get("batLevel"),
+                    "next_device_sync": self._ms_timestamp_to_datetime(next_sync_ms),
+                    "sleep_time": status.get("sleepTime"),
+                    "sleep_time_predict": status.get("sleepTimePredict"),
+                    "update_pending": status.get("updatePending"),
+                }
+                _LOGGER.debug("Ping %s -> reachable=%s", device_id, result["reachable"])
+                return result
+
+        except aiohttp.ClientError as err:
+            _LOGGER.debug("Ping %s -> error: %s", device_id, err)
+            return {"reachable": False}
 
     async def _async_update_data(self) -> list[dict]:
-        """Fetch all devices, ensure paper_ids, ping each device."""
+        """Fetch device list, enrich each device with ping data and paper_id."""
         try:
             async with self._session.get(
                 f"{API_BASE_URL}/devices/",
@@ -169,8 +234,13 @@ class PaperlessCoordinator(DataUpdateCoordinator):
 
                 for device in devices:
                     device_id = device["id"]
-                    device["paper_id"] = await self._ensure_paper_id(device_id)
-                    device["reachable"] = await self._ping_device(device_id)
+
+                    # Ensure valid paper_id
+                    device["paper_id"] = await self._ensure_paper_id(device_id, device)
+
+                    # Ping device → enriched status data
+                    ping_data = await self._ping_device(device_id)
+                    device.update(ping_data)
 
                 return devices
 
