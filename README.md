@@ -79,10 +79,11 @@ Currently supported languages:
 
 | Language | Code |
 | --- | --- |
-| English | en |
+| English | en |
 | German | de |
 
-> **Note:**  After changing the language, don't miss to clear you browser cache.
+> **Note:** After changing the language, don't miss to clear your browser cache.
+
 ---
 
 ## Entities
@@ -125,25 +126,23 @@ Upload an image to an ePaper display.
 
 | Parameter | Required | Description |
 |---|---|---|
-| `target` | Yes | The paperlesspaper device to upload to |
-| `media_content_id` | Yes | Path to the image — supports `media-source://` and `http://` URLs |
+| `device_id` | Yes | The paperlesspaper device to upload to |
+| `media_content_id` | Yes | Image selected via the HA Media Picker, or a direct `https://` URL |
 
-#### Example: Upload a local file
+The `media_content_id` field supports two formats:
+
+**Media Picker** (recommended) — use the built-in HA media browser to select an image from your media library. When using automations, the Media Picker returns a dictionary:
 
 ```yaml
-action: paperlesspaper.upload_image
-target:
-  device_id: <your_device_id>
 data:
-  media_content_id: media-source://media_source/local/my_image.png
+  media_content_id:
+    media_content_id: media-source://media_source/local/my_image.png
+    media_content_type: image/png
 ```
 
-#### Example: Upload from external URL
+**Direct URL** — pass any public `https://` URL as a plain string:
 
 ```yaml
-action: paperlesspaper.upload_image
-target:
-  device_id: <your_device_id>
 data:
   media_content_id: https://example.com/image.png
 ```
@@ -162,10 +161,11 @@ automation:
       at: "07:00:00"
   action:
     - action: paperlesspaper.upload_image
-      target:
-        device_id: <your_device_id>
       data:
-        media_content_id: media-source://media_source/local/morning.png
+        device_id: <your_device_id>
+        media_content_id:
+          media_content_id: media-source://media_source/local/morning.png
+          media_content_type: image/png
 ```
 
 ### Update display when a sensor changes
@@ -178,10 +178,26 @@ automation:
       entity_id: weather.home
   action:
     - action: paperlesspaper.upload_image
-      target:
-        device_id: <your_device_id>
       data:
-        media_content_id: media-source://media_source/local/weather.png
+        device_id: <your_device_id>
+        media_content_id:
+          media_content_id: media-source://media_source/local/weather.png
+          media_content_type: image/png
+```
+
+### Update display from an external URL
+
+```yaml
+automation:
+  alias: "ePaper update from URL"
+  trigger:
+    - platform: time
+      at: "08:00:00"
+  action:
+    - action: paperlesspaper.upload_image
+      data:
+        device_id: <your_device_id>
+        media_content_id: https://example.com/daily-image.jpg
 ```
 
 ---
