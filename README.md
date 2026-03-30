@@ -12,8 +12,9 @@ Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directl
 
 - **Automatic device discovery** — all devices in your paperlesspaper organization appear automatically in HA
 - **upload_image action** — send any image from HA media sources to your ePaper display
+- **Device sensors** — monitor battery level, sync status, next wake-up time, sleep time, and more
 - **Connectivity sensor** — monitor whether your display is reachable
-- **Last loaded sensor** — see when your display last refreshed its image
+- **Firmware update sensor** — know when a firmware update is available
 - **Multi-device support** — manage multiple ePaper displays from a single integration entry
 - **Automation-ready** — trigger image updates from time schedules, sensors, or any HA event
 
@@ -65,10 +66,22 @@ Before installing this integration you need:
 
 For each ePaper device the integration creates:
 
-| Entity | Type | Description |
+### Sensors
+
+| Entity | Description | Unit |
 |---|---|---|
-| `sensor.<device>_last_loaded` | Sensor | Timestamp of the last successful image refresh |
-| `binary_sensor.<device>_reachable` | Binary Sensor | `on` if the device is reachable, `off` if not |
+| `sensor.<device>_battery_level` | Battery voltage | V |
+| `sensor.<device>_next_sync` | Next scheduled wake-up time | datetime |
+| `sensor.<device>_sleep_time` | Configured sleep interval | s |
+| `sensor.<device>_sleep_time_predicted` | Predicted sleep interval | s |
+| `sensor.<device>_picture_synced` | Whether the current image is synced | — |
+
+### Binary Sensors
+
+| Entity | Description |
+|---|---|
+| `binary_sensor.<device>_reachable` | `on` if the device is reachable |
+| `binary_sensor.<device>_update_pending` | `on` if a firmware update is available |
 
 ---
 
@@ -143,30 +156,52 @@ automation:
 
 ## How it works
 
-The integration polls the paperlesspaper API every 5 minutes to update device states. On first setup — and on every HA restart — it validates that a dedicated paper (screen slot) exists for each device. If the paper was deleted in the paperlesspaper app, a new one is created automatically.
+The integration polls the paperlesspaper API every 5 minutes. Each poll calls `GET /devices/ping/:id?dataResponse=false` per device — this single endpoint returns both the reachability status and the full device telemetry (battery, sync status, firmware version, next wake-up time, etc.).
 
-Image uploads use the `POST /papers/uploadSingleImage` API endpoint. The API compares each new image against the current one and skips the upload if they are too similar — this avoids unnecessary ePaper refresh cycles which extend display lifetime.
+On first setup — and on every HA restart — the integration validates that a dedicated paper (screen slot) exists for each device. If the paper was deleted in the paperlesspaper app, a new one is created automatically.
 
-> **Note:** The paperlesspaper API is v1 and some endpoints are still being finalized. The `GET /devices/events` endpoint currently returns HTTP 400 and is not used by this integration.
+Image uploads use the `POST /papers/uploadSingleImage` endpoint. The API compares each new image against the current one and skips the upload if they are too similar — this avoids unnecessary ePaper refresh cycles which extend display lifetime.
+
+> **Note:** ePaper displays wake up on a schedule (default: every 60 minutes). Uploaded images appear on the next wake cycle — not instantly.
 
 ---
 
 ## Known limitations
 
-- ePaper displays wake up on a schedule (default: every 60 minutes). Uploaded images appear on the next wake cycle — not instantly.
-- The paperlesspaper API does not provide a push/webhook mechanism. All state updates are polled.
-- Deleting papers is not supported via API — use the paperlesspaper app to manage papers.
+- The paperlesspaper API is v1 and some endpoints are still being finalized
+- The `GET /devices/events` endpoint currently returns HTTP 400 and is not used by this integration
+- Deleting papers is not supported via the API — use the paperlesspaper app to manage papers
+- Battery level is reported as a raw millivolt value from the device hardware — accuracy may vary
+
+---
+
+## Disclaimer
+
+This software is provided **free of charge** and **as-is**, without any warranty of any kind, express or implied. By using this integration, you accept full responsibility for any consequences arising from its use.
+
+- This integration is **not officially affiliated with, endorsed by, or supported by** paperlesspaper / wirewire
+- The author provides **no guarantee** of functionality, reliability, or fitness for any particular purpose
+- Use of this integration is **entirely at your own risk**
+- The author accepts **no liability** for any damage, data loss, costs, or other harm arising from the use or inability to use this software
+
+If you encounter issues with the paperlesspaper API or your devices, please contact [paperlesspaper support](https://paperlesspaper.de/posts/contact) directly.
 
 ---
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first.
-
-This integration is not officially affiliated with or endorsed by paperlesspaper / wirewire.
+Pull requests and issue reports are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ---
 
 ## License
 
-MIT
+MIT License
+
+Copyright (c) 2026 paperlesspaper-ha contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+**THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.**
