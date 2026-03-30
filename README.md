@@ -14,7 +14,8 @@ Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directl
 - **upload_image action** — send any image from HA media sources to your ePaper display
 - **Device sensors** — monitor battery level, sync status, next wake-up time, sleep time, and more
 - **Connectivity sensor** — monitor whether your display is reachable
-- **Firmware update sensor** — know when a firmware update is available
+- **Update sensor** — know when an update is available
+- **Reset/Reboot Button** - to force a soft init of your ePaper device
 - **Multi-device support** — manage multiple ePaper displays from a single integration entry
 - **Automation-ready** — trigger image updates from time schedules, sensors, or any HA event
 
@@ -88,7 +89,7 @@ For each ePaper device the integration creates:
 | Entity | Description |
 |---|---|
 | `button.<device>_reboot` | Remotely reboot the ePaper device |
-| `button.<device>__reset_sensors` | Reset all sensors on the device to factory defaults |
+| `button.<device>_reset_sensors` | Reset all sensors on the device to factory defaults |
 
 > **Warning:** The reset button wipes all variables and memory on the device and triggers a reboot. Use with caution.
 
