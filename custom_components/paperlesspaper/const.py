@@ -2,7 +2,7 @@
 
 DOMAIN = "paperlesspaper"
 
-PLATFORMS = ["sensor", "binary_sensor"]
+PLATFORMS = ["sensor", "binary_sensor", "button"]
 
 API_BASE_URL = "https://api.memo.wirewire.de/v1"
 
