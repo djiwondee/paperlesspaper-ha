@@ -28,6 +28,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Reload integration when options change (e.g. polling interval)
+    entry.async_on_unload(
+        entry.add_update_listener(async_reload_entry)
+    )
+
     async def handle_upload_image(call: ServiceCall) -> None:
         """Handle upload_image service call."""
         media_raw = call.data["media_content_id"]
@@ -170,6 +175,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     return True
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload integration when options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

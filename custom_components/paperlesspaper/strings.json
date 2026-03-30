@@ -23,5 +23,15 @@
     "abort": {
       "already_configured": "This organization is already configured."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "paperlesspaper options",
+        "data": {
+          "polling_interval": "Polling interval (seconds)"
+        }
+      }
+    }
   }
 }

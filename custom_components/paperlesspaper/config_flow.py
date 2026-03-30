@@ -4,10 +4,20 @@ from __future__ import annotations
 import aiohttp
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import API_BASE_URL, CONF_API_KEY, CONF_ORGANIZATION_ID, DOMAIN
+from .const import (
+    API_BASE_URL,
+    CONF_API_KEY,
+    CONF_ORGANIZATION_ID,
+    CONF_POLLING_INTERVAL,
+    DEFAULT_POLLING_INTERVAL,
+    MAX_POLLING_INTERVAL,
+    MIN_POLLING_INTERVAL,
+    DOMAIN,
+)
 
 
 class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -49,10 +59,8 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
                             self._organizations = orgs
 
                             if len(orgs) == 1:
-                                # Single organization → use directly
                                 return await self._create_entry(orgs[0])
                             else:
-                                # Multiple organizations → let user choose
                                 return await self.async_step_organization()
 
             except aiohttp.ClientConnectionError:
@@ -100,4 +108,40 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_API_KEY: self._api_key,
                 CONF_ORGANIZATION_ID: org["id"],
             },
+        )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry) -> OptionsFlow:
+        """Return the options flow."""
+        return PaperlessOptionsFlow(config_entry)
+
+
+class PaperlessOptionsFlow(OptionsFlow):
+    """Handle options for paperlesspaper."""
+
+    def __init__(self, config_entry) -> None:
+        """Initialize."""
+        self._config_entry = config_entry
+
+    async def async_step_init(self, user_input=None) -> ConfigFlowResult:
+        """Manage options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        current_interval = self._config_entry.options.get(
+            CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Required(
+                    CONF_POLLING_INTERVAL,
+                    default=current_interval,
+                ): vol.All(
+                    int,
+                    vol.Range(min=MIN_POLLING_INTERVAL, max=MAX_POLLING_INTERVAL),
+                ),
+            }),
         )

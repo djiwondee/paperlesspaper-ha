@@ -17,7 +17,8 @@ from .const import (
     CONF_API_KEY,
     CONF_ORGANIZATION_ID,
     CONF_PAPER_IDS,
-    POLLING_INTERVAL,
+    CONF_POLLING_INTERVAL,
+    DEFAULT_POLLING_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,11 +29,14 @@ class PaperlessCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize."""
+        polling_interval = entry.options.get(
+            CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL
+        )
         super().__init__(
             hass,
             _LOGGER,
             name="paperlesspaper",
-            update_interval=timedelta(seconds=POLLING_INTERVAL),
+            update_interval=timedelta(seconds=polling_interval),
         )
         self.entry = entry
         self.api_key: str = entry.data[CONF_API_KEY]

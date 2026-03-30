@@ -61,6 +61,15 @@ Before installing this integration you need:
 4. If you have multiple organizations, select the one containing your devices
 5. Click **Submit** — all your devices are discovered automatically
 
+### Options
+
+After setup you can adjust the polling interval under **Settings → Devices & Services → paperlesspaper → Configure**:
+
+| Option | Default | Min | Max | Description |
+| --- | --- | --- | --- | --- |
+| polling_interval | 300s | 60s | 3600s | How often HA polls the paperlesspaper API for device status updates |
+
+> **Note:** After changing the polling interval the integration reloads automatically.
 ---
 
 ## Entities
