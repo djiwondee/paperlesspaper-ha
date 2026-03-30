@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import logging
+import mimetypes
 
 import aiohttp
+import aiofiles
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -28,7 +30,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_upload_image(call: ServiceCall) -> None:
         """Handle upload_image service call."""
-        media_content_id = call.data["media_content_id"]
+        media_raw = call.data["media_content_id"]
+
+        # Media selector returns a dict: {"media_content_id": "...", "media_content_type": "..."}
+        # Text input returns a plain string
+        if isinstance(media_raw, dict):
+            media_content_id = media_raw.get("media_content_id", "")
+        else:
+            media_content_id = media_raw
 
         # Resolve target device
         target_device_ids = call.data.get("device_id", [])
@@ -65,44 +74,67 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not paper_id:
             raise HomeAssistantError(f"No paper_id found for device {pp_device_id}")
 
-        # Resolve media URL
-        # Supports:
-        # - media-source://media_source/local/file.png
-        # - http://localhost:8123/local/file.png
-        # - any external http/https URL
+        # Fetch image bytes
         session = async_get_clientsession(hass)
+        image_data: bytes | None = None
+        content_type = "image/jpeg"
 
         if media_content_id.startswith("media-source://"):
+            # Resolve media-source:// URI
             try:
                 from homeassistant.components.media_source import async_resolve_media
                 media = await async_resolve_media(hass, media_content_id, None)
                 media_url = media.url
-                if media_url.startswith("/"):
-                    media_url = f"http://localhost:8123{media_url}"
             except Exception as err:
                 raise HomeAssistantError(f"Could not resolve media source: {err}") from err
+
+            _LOGGER.debug("Resolved media URL: %s", media_url)
+
+            if not media_url.startswith("http"):
+                # Fix path: /media/local/ -> /media/
+                media_url = media_url.replace("/media/local/", "/media/")
+                # Local file path — read directly from filesystem (no auth needed)
+                try:
+                    async with aiofiles.open(media_url, "rb") as f:
+                        image_data = await f.read()
+                    content_type = mimetypes.guess_type(media_url)[0] or "image/jpeg"
+                    _LOGGER.debug(
+                        "Read image from filesystem %s: %d bytes, type=%s",
+                        media_url, len(image_data), content_type,
+                    )
+                except OSError as err:
+                    raise HomeAssistantError(f"Could not read image file: {err}") from err
+            else:
+                # External URL
+                try:
+                    async with session.get(media_url) as resp:
+                        resp.raise_for_status()
+                        image_data = await resp.read()
+                        content_type = resp.headers.get("Content-Type", "image/jpeg")
+                except aiohttp.ClientError as err:
+                    raise HomeAssistantError(f"Could not fetch image: {err}") from err
+
         elif media_content_id.startswith("http"):
-            media_url = media_content_id
+            # Direct HTTP/HTTPS URL
+            try:
+                async with session.get(media_content_id) as resp:
+                    resp.raise_for_status()
+                    image_data = await resp.read()
+                    content_type = resp.headers.get("Content-Type", "image/jpeg")
+                    _LOGGER.debug(
+                        "Fetched image from %s: %d bytes, type=%s",
+                        media_content_id, len(image_data), content_type,
+                    )
+            except aiohttp.ClientError as err:
+                raise HomeAssistantError(f"Could not fetch image: {err}") from err
         else:
             raise HomeAssistantError(
                 f"Unsupported media_content_id format: {media_content_id}. "
                 "Use media-source://... or http://..."
             )
 
-        # Fetch image bytes
-        try:
-            async with session.get(media_url) as resp:
-                resp.raise_for_status()
-                image_data = await resp.read()
-                content_type = resp.headers.get("Content-Type", "image/png")
-                _LOGGER.debug(
-                    "Fetched image from %s: %d bytes, type=%s",
-                    media_url,
-                    len(image_data),
-                    content_type,
-                )
-        except aiohttp.ClientError as err:
-            raise HomeAssistantError(f"Could not fetch image: {err}") from err
+        if not image_data:
+            raise HomeAssistantError("No image data received")
 
         # Upload to paperlesspaper API
         try:
@@ -110,7 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             form.add_field(
                 "picture",
                 image_data,
-                filename="image.png",
+                filename="image.jpg",
                 content_type=content_type,
             )
 
@@ -125,7 +157,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.info(
                     "Image uploaded to paper %s: similarity=%.1f%% skipped=%s",
                     paper_id,
-                    result.get("similarityPercentage", 0),
+                    result.get("similarityPercentage") or 0,
                     result.get("skippedUpload", False),
                 )
         except aiohttp.ClientError as err:

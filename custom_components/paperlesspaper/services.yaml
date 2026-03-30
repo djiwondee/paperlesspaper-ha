@@ -6,9 +6,16 @@ upload_image:
       integration: paperlesspaper
   fields:
     media_content_id:
-      name: Media content ID
-      description: The media source path of the image to upload (e.g. media-source://media_source/local/image.jpg).
+      name: Image
+      description: Select an image from your media library.
       required: true
-      example: "media-source://media_source/local/image.jpg"
       selector:
-        text:
+        media:
+          accept:
+            - image/jpeg
+            - image/png
+            - image/gif
+            - image/webp
+            - image/svg+xml
+            - image/heic
+            - image/heif
