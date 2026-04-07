@@ -1,7 +1,8 @@
 # paperlesspaper for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/paperlesspaper/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directly from Home Assistant — including automations, scripts, and the full HA media library.
@@ -10,14 +11,14 @@ Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directl
 
 ## Features
 
-- **Automatic device discovery** — all devices in your paperlesspaper organization appear automatically in HA
-- **upload_image action** — send any image from HA media sources to your ePaper display
-- **Device sensors** — monitor battery level, sync status, next wake-up time, sleep time, and more
-- **Connectivity sensor** — monitor whether your display is reachable
-- **Update sensor** — know when an update is available
-- **Reset/Reboot Button** - to force a soft init of your ePaper device
-- **Multi-device support** — manage multiple ePaper displays from a single integration entry
-- **Automation-ready** — trigger image updates from time schedules, sensors, or any HA event
+- **Automatic device discovery** - Devices in your paperlesspaper organization appear automatically in HA
+- **upload_image action** — Send any image from HA media sources to your ePaper display
+- **Device sensors** — Monitor battery level, sync status, next wake-up time, sleep time, and more
+- **Connectivity sensor** — Monitor whether your display is reachable
+- **Update sensor** — Know when an update is available
+- **Reset/Reboot Button** - Gorce a soft init of your ePaper device
+- **Multi-device support** — Manage multiple ePaper displays from a single integration entry
+- **Automation-ready** — Trigger image updates from time schedules, sensors, or any HA event
 
 ---
 
