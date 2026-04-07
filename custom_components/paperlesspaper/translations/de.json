@@ -34,6 +34,22 @@
       }
     }
   },
+  "services": {
+    "upload_image": {
+      "name": "Bild hochladen",
+      "description": "Lädt ein Bild auf ein paperlesspaper ePaper Display hoch.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Das paperlesspaper ePaper Display, auf das hochgeladen werden soll."
+        },
+        "media_content_id": {
+          "name": "Bild",
+          "description": "Wähle ein Bild aus der Medienbibliothek oder gib eine direkte https:// URL an."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "picture_synced": {
@@ -54,7 +70,7 @@
     },
     "binary_sensor": {
       "reachable": {
-        "name": "Erreichbar"
+        "name": "Gerät erreichbar"
       },
       "update_pending": {
         "name": "Update ausstehend"
@@ -62,10 +78,10 @@
     },
     "button": {
       "reboot": {
-        "name": "Neustart"
+        "name": "Gerät neu starten"
       },
       "reset_sensors": {
-        "name": "Sensoren zurücksetzen"
+        "name": "Gerätesensoren zurücksetzen"
       }
     }
   }

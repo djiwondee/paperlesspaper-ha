@@ -1,10 +1,10 @@
 {
   "domain": "paperlesspaper",
-  "name": "paperlesspaper",
-  "codeowners": ["@paperlesspaper-ha"],
+  "name": "paperlesspaper ePaper Display",
+  "codeowners": ["@djiwondee"],
   "config_flow": true,
-  "documentation": "https://github.com/paperlesspaper/paperlesspaper-ha",
+  "documentation": "https://github.com/djiwondee/paperlesspaper-ha",
   "iot_class": "cloud_polling",
   "requirements": ["aiohttp>=3.9.0", "aiofiles>=23.0.0"],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
