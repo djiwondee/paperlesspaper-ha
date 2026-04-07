@@ -34,6 +34,22 @@
       }
     }
   },
+  "services": {
+    "upload_image": {
+      "name": "Upload image",
+      "description": "Upload an image to a paperlesspaper ePaper display.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The paperlesspaper ePaper display to upload to."
+        },
+        "media_content_id": {
+          "name": "Image",
+          "description": "Select an image from your media library or provide a direct https:// URL."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "picture_synced": {
@@ -54,7 +70,7 @@
     },
     "binary_sensor": {
       "reachable": {
-        "name": "Reachable"
+        "name": "Device Reachable"
       },
       "update_pending": {
         "name": "Update Pending"
@@ -62,10 +78,10 @@
     },
     "button": {
       "reboot": {
-        "name": "Reboot"
+        "name": "Reboot Device"
       },
       "reset_sensors": {
-        "name": "Reset Sensors"
+        "name": "Reset Device Sensors"
       }
     }
   }
