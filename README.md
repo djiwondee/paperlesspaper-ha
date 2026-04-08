@@ -101,7 +101,7 @@ For each ePaper device the integration creates:
 
 | Entity | Description | Unit |
 |---|---|---|
-| `sensor.<device>_battery_level` | Battery voltage | % |
+| `sensor.<device>_battery_level` | Battery level | % |
 | `sensor.<device>_battery_voltage` | Battery voltage | V |
 | `sensor.<device>_next_sync` | Next scheduled wake-up time | datetime |
 | `sensor.<device>_sleep_time` | Configured sleep interval | s |
