@@ -1,3 +1,8 @@
+# ============================================================================
+# CHANGE HISTORY
+# 2026-04-08  0.1.3  fix for correct Python 3 exception syntax in sensor.py
+# ============================================================================
+
 """Sensor platform for paperlesspaper."""
 
 from __future__ import annotations
@@ -119,7 +124,7 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
             return None
         try:
             return round(int(val) / 1000, 2)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return None
 
 
@@ -144,7 +149,7 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
             return None
         try:
             return datetime.fromisoformat(iso_str)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return None
 
 
