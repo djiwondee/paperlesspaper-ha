@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-0.1.4-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -101,7 +101,8 @@ For each ePaper device the integration creates:
 
 | Entity | Description | Unit |
 |---|---|---|
-| `sensor.<device>_battery_level` | Battery voltage | V |
+| `sensor.<device>_battery_level` | Battery voltage | % |
+| `sensor.<device>_battery_voltage` | Battery voltage | V |
 | `sensor.<device>_next_sync` | Next scheduled wake-up time | datetime |
 | `sensor.<device>_sleep_time` | Configured sleep interval | s |
 | `sensor.<device>_sleep_time_predicted` | Predicted sleep interval | s |
