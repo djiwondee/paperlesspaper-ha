@@ -1,4 +1,4 @@
-# paperlesspaper for Home Assistant
+# paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
@@ -7,17 +7,21 @@
 
 Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directly from Home Assistant — including automations, scripts, and the full HA media library.
 
+<img width="1036" height="332" alt="Integration Entries" src="https://github.com/user-attachments/assets/844ac9b7-d7ec-4200-bafb-df9a1d9181d3" />
+
 ---
 
 ## Features
 
+<img width="2054" height="1624" alt="Device Overview" src="https://github.com/user-attachments/assets/5625a723-1827-4cd2-9281-4cf375809f54" />
+
 - **Automatic device discovery** - Devices in your paperlesspaper organization appear automatically in HA
-- **upload_image action** — Send any image from HA media sources to your ePaper display
+- **Multi-device support** — Manage multiple ePaper displays from a single integration entry
 - **Device sensors** — Monitor battery level, sync status, next wake-up time, sleep time, and more
 - **Connectivity sensor** — Monitor whether your display is reachable
 - **Update sensor** — Know when an update is available
 - **Reset/Reboot Button** - Gorce a soft init of your ePaper device
-- **Multi-device support** — Manage multiple ePaper displays from a single integration entry
+- **upload_image action** — Send any image from HA media sources to your ePaper display
 - **Automation-ready** — Trigger image updates from time schedules, sensors, or any HA event
 
 ---
@@ -69,6 +73,8 @@ After setup you can adjust the polling interval under **Settings → Devices & S
 | Option | Default | Min | Max | Description |
 | --- | --- | --- | --- | --- |
 | polling_interval | 300s | 60s | 3600s | How often HA polls the paperlesspaper API for device status updates |
+
+<img width="600" height="271" alt="Configuring Polling Option" src="https://github.com/user-attachments/assets/e9066b63-5c5f-43b2-944f-a0bae8180eb1" />
 
 > **Note:** After changing the polling interval the integration reloads automatically.
 
@@ -140,6 +146,7 @@ data:
     media_content_id: media-source://media_source/local/my_image.png
     media_content_type: image/png
 ```
+<img width="1086" height="461" alt="Select Image Source using Media Picker" src="https://github.com/user-attachments/assets/acc28458-04a2-4d25-b6d6-5671fa6233bd" />
 
 **Direct URL** — pass any public `https://` URL as a plain string:
 
