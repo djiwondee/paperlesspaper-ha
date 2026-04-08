@@ -52,9 +52,6 @@
   },
   "entity": {
     "sensor": {
-      "picture_synced": {
-        "name": "Picture Synced"
-      },
       "bat_level": {
         "name": "Battery Level"
       },
@@ -74,6 +71,13 @@
     "binary_sensor": {
       "reachable": {
         "name": "Reachable"
+      },
+      "picture_synced": {
+        "name": "Picture Synced",
+        "state": {
+          "on": "Synced",
+          "off": "Pending"
+        }
       },
       "update_pending": {
         "name": "Update Pending"

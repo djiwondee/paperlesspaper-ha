@@ -1,4 +1,10 @@
 """Binary sensor platform for paperlesspaper."""
+# =============================================================================
+# CHANGE HISTORY
+# 2026-04-08  0.1.5  Added PaperlessPictureSyncedSensor (moved from sensor.py)
+#                    Fixed docstring of PaperlessUpdatePendingSensor:
+#                    updatePending reflects picture update state, not firmware
+# =============================================================================
 
 from __future__ import annotations
 
@@ -8,6 +14,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -29,6 +36,7 @@ async def async_setup_entry(
         entities.extend(
             [
                 PaperlessDeviceReachableSensor(coordinator, device),
+                PaperlessPictureSyncedSensor(coordinator, device),
                 PaperlessUpdatePendingSensor(coordinator, device),
             ]
         )
@@ -54,6 +62,7 @@ class PaperlessDeviceReachableSensor(CoordinatorEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_has_entity_name = True
     _attr_translation_key = "reachable"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC # Not critical for primary device function
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -79,12 +88,52 @@ class PaperlessDeviceReachableSensor(CoordinatorEntity, BinarySensorEntity):
         return self._device.get("reachable")
 
 
+class PaperlessPictureSyncedSensor(CoordinatorEntity, BinarySensorEntity):
+    """Binary sensor: True if the current picture is synced to the display.
+
+    The API field 'pictureSynced' is True when the display is showing the
+    latest uploaded image, and False when a new image has been uploaded but
+    not yet fetched by the device on its next wake cycle.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "picture_synced"
+    _attr_icon = "mdi:image-check"
+
+    def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._device_id = device["id"]
+        self._attr_unique_id = f"{device['id']}_picture_synced"
+        self._attr_device_info = _device_info(device)
+
+    @property
+    def _device(self) -> dict | None:
+        """Return current device data from coordinator."""
+        return next(
+            (d for d in self.coordinator.data if d["id"] == self._device_id),
+            None,
+        )
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return True if the picture is synced to the display."""
+        if self._device is None:
+            return None
+        return self._device.get("picture_synced")
+
+
 class PaperlessUpdatePendingSensor(CoordinatorEntity, BinarySensorEntity):
-    """Binary sensor: True if a firmware update is pending."""
+    """Binary sensor: True if a picture update is pending.
+
+    The API field 'updatePending' reflects whether the device has a pending
+    picture update to process. Value 'update_ok' means no update is pending.
+    """
 
     _attr_device_class = BinarySensorDeviceClass.UPDATE
     _attr_has_entity_name = True
     _attr_translation_key = "update_pending"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC # Not critical for primary device function
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -104,7 +153,7 @@ class PaperlessUpdatePendingSensor(CoordinatorEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        """Return True if firmware update is pending."""
+        """Return True if a picture update is pending."""
         if self._device is None:
             return None
         val = self._device.get("update_pending")

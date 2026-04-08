@@ -4,11 +4,11 @@
 # 2026-04-08  0.1.3  Fixed Python 3 exception syntax: except (A, B) instead
 #                    of except A, B (Python 2 syntax) in PaperlessBatLevelSensor
 #                    and PaperlessNextSyncSensor.
-#
 # 2026-04-08  0.1.4  Split battery sensor into two separate sensors:
 #                    - PaperlessBatLevelSensor: percentage (0-100%) calculated
 #                      from voltage using ((V - 4.4) / (6.0 - 4.4) * 100)
 #                    - PaperlessBatVoltageSensor: raw voltage in V (mV -> V)
+# 2026-04-08  0.1.5  Moved PaperlessPictureSyncedSensor to binary_sensor.py
 # =============================================================================
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import EntityCategory, PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -47,7 +47,6 @@ async def async_setup_entry(
     for device in coordinator.data:
         entities.extend(
             [
-                PaperlessPictureSyncedSensor(coordinator, device),
                 PaperlessBatLevelSensor(coordinator, device),
                 PaperlessBatVoltageSensor(coordinator, device),
                 PaperlessNextSyncSensor(coordinator, device),
@@ -108,17 +107,6 @@ class PaperlessBaseSensor(CoordinatorEntity, SensorEntity):
         return self._device.get(self._field)
 
 
-class PaperlessPictureSyncedSensor(PaperlessBaseSensor):
-    """Sensor: picture synced status."""
-
-    _field = "picture_synced"
-    _attr_icon = "mdi:image-check"
-
-    def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
-        """Initialize."""
-        super().__init__(coordinator, device, "picture_synced", "picture_synced")
-
-
 class PaperlessBatLevelSensor(PaperlessBaseSensor):
     """Sensor: battery level as percentage (0-100%).
 
@@ -133,6 +121,7 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
     _attr_device_class = SensorDeviceClass.BATTERY
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC # Not critical for primary device function
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -177,6 +166,7 @@ class PaperlessBatVoltageSensor(PaperlessBaseSensor):
     _attr_state_class = SensorStateClass.MEASUREMENT
     # Disabled by default — enable manually if raw voltage monitoring is needed
     _attr_entity_registry_enabled_default = False
+    _attr_entity_category = EntityCategory.DIAGNOSTIC # Not critical for primary device function
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -222,11 +212,16 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
 
 
 class PaperlessSleepTimeSensor(PaperlessBaseSensor):
-    """Sensor: configured sleep time in seconds."""
+    """Sensor: configured sleep interval in seconds.
+
+    This is the sleep interval configured on the device. The new value
+    only takes effect after the device has fetched it on its next wake cycle.
+    """
 
     _field = "sleep_time"
     _attr_icon = "mdi:sleep"
     _attr_native_unit_of_measurement = "s"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC # Not critical for primary device function
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -234,7 +229,11 @@ class PaperlessSleepTimeSensor(PaperlessBaseSensor):
 
 
 class PaperlessSleepTimePredictSensor(PaperlessBaseSensor):
-    """Sensor: predicted sleep time in seconds."""
+    """Sensor: predicted time in seconds until the next image update on the display.
+
+    This is the predicted duration until the device wakes up and displays
+    the next image. More relevant to the user than the configured sleep time.
+    """
 
     _field = "sleep_time_predict"
     _attr_icon = "mdi:sleep"

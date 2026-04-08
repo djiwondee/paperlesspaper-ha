@@ -52,9 +52,6 @@
   },
   "entity": {
     "sensor": {
-      "picture_synced": {
-        "name": "Picture Synced"
-      },
       "bat_level": {
         "name": "Battery Level"
       },
@@ -65,15 +62,22 @@
         "name": "Next Sync"
       },
       "sleep_time": {
-        "name": "Sleep Time"
+        "name": "Sleep Interval"
       },
       "sleep_time_predict": {
-        "name": "Sleep Time Predicted"
+        "name": "Next Image Update"
       }
     },
     "binary_sensor": {
       "reachable": {
         "name": "Device Reachable"
+      },
+      "picture_synced": {
+        "name": "Picture Synced",
+        "state": {
+          "on": "Synced",
+          "off": "Pending"
+        }
       },
       "update_pending": {
         "name": "Update Pending"
