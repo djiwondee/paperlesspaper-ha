@@ -58,6 +58,9 @@
       "bat_level": {
         "name": "Batteriepegel"
       },
+      "bat_voltage": {
+        "name": "Batteriespannung"
+      },
       "next_device_sync": {
         "name": "Nächste Synchronisierung"
       },

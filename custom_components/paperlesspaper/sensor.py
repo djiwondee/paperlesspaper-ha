@@ -1,16 +1,27 @@
-# ============================================================================
-# CHANGE HISTORY
-# 2026-04-08  0.1.3  fix for correct Python 3 exception syntax in sensor.py
-# ============================================================================
-
 """Sensor platform for paperlesspaper."""
+# =============================================================================
+# CHANGE HISTORY
+# 2026-04-08  0.1.3  Fixed Python 3 exception syntax: except (A, B) instead
+#                    of except A, B (Python 2 syntax) in PaperlessBatLevelSensor
+#                    and PaperlessNextSyncSensor.
+#
+# 2026-04-08  0.1.4  Split battery sensor into two separate sensors:
+#                    - PaperlessBatLevelSensor: percentage (0-100%) calculated
+#                      from voltage using ((V - 4.4) / (6.0 - 4.4) * 100)
+#                    - PaperlessBatVoltageSensor: raw voltage in V (mV -> V)
+# =============================================================================
 
 from __future__ import annotations
 
 from datetime import datetime
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -18,6 +29,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PaperlessCoordinator
+
+# Battery voltage range for percentage calculation (in Volts)
+BAT_VOLTAGE_MIN = 4.4  # 0% — minimum operating voltage
+BAT_VOLTAGE_MAX = 6.0  # 100% — fully charged voltage
 
 
 async def async_setup_entry(
@@ -34,6 +49,7 @@ async def async_setup_entry(
             [
                 PaperlessPictureSyncedSensor(coordinator, device),
                 PaperlessBatLevelSensor(coordinator, device),
+                PaperlessBatVoltageSensor(coordinator, device),
                 PaperlessNextSyncSensor(coordinator, device),
                 PaperlessSleepTimeSensor(coordinator, device),
                 PaperlessSleepTimePredictSensor(coordinator, device),
@@ -104,19 +120,71 @@ class PaperlessPictureSyncedSensor(PaperlessBaseSensor):
 
 
 class PaperlessBatLevelSensor(PaperlessBaseSensor):
-    """Sensor: battery level."""
+    """Sensor: battery level as percentage (0-100%).
+
+    Calculates percentage from raw millivolt API value using:
+        percentage = (voltage_V - BAT_VOLTAGE_MIN) / (BAT_VOLTAGE_MAX - BAT_VOLTAGE_MIN) * 100
+
+    Result is clamped to 0-100 to handle out-of-range hardware readings.
+    """
 
     _field = "bat_level"
     _attr_icon = "mdi:battery"
-    _attr_native_unit_of_measurement = "V"
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
         super().__init__(coordinator, device, "bat_level", "bat_level")
 
     @property
+    def native_value(self) -> int | None:
+        """Return battery level as percentage (0-100).
+
+        API provides millivolts; converts to volts first, then calculates
+        percentage based on the defined voltage range.
+        """
+        if self._device is None:
+            return None
+        val = self._device.get("bat_level")
+        if val is None:
+            return None
+        try:
+            voltage_v = int(val) / 1000
+            percentage = (
+                (voltage_v - BAT_VOLTAGE_MIN)
+                / (BAT_VOLTAGE_MAX - BAT_VOLTAGE_MIN)
+                * 100
+            )
+            # Clamp to valid range to handle out-of-range hardware readings
+            return max(0, min(100, round(percentage)))
+        except (ValueError, TypeError):
+            return None
+
+
+class PaperlessBatVoltageSensor(PaperlessBaseSensor):
+    """Sensor: raw battery voltage in Volts.
+
+    Provides the raw voltage reading from the API (converted from mV to V).
+    Useful for diagnostics and for users who want to monitor exact voltage.
+    """
+
+    _field = "bat_level"
+    _attr_icon = "mdi:sine-wave"
+    _attr_device_class = SensorDeviceClass.VOLTAGE
+    _attr_native_unit_of_measurement = "V"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    # Disabled by default — enable manually if raw voltage monitoring is needed
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
+        """Initialize."""
+        super().__init__(coordinator, device, "bat_voltage", "bat_voltage")
+
+    @property
     def native_value(self) -> float | None:
-        """Return battery level in Volts (API provides mV)."""
+        """Return battery voltage in Volts (API provides millivolts)."""
         if self._device is None:
             return None
         val = self._device.get("bat_level")
