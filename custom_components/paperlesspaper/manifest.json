@@ -4,8 +4,8 @@
   "codeowners": ["@djiwondee"],
   "config_flow": true,
   "documentation": "https://github.com/djiwondee/paperlesspaper-ha",
-  "homeassistant": "2026.3.0",
+  "integration_type": "hub",
   "iot_class": "cloud_polling",
   "requirements": ["aiohttp>=3.9.0", "aiofiles>=23.0.0"],
-  "version": "0.1.2"
+  "version": "0.1.3"
 }
