@@ -1,3 +1,14 @@
+# =============================================================================
+# CHANGE HISTORY
+# 2026-04-09  0.1.7  Options flow: replaced voluptuous Range validator with
+#                    manual validation to enable localized error messages for
+#                    out-of-range polling interval values.
+#                    Removed custom __init__ from PaperlessOptionsFlow —
+#                    self.config_entry is provided by HA automatically.
+#                    Fixed async_get_options_flow to not pass config_entry
+#                    to PaperlessOptionsFlow constructor.
+# =============================================================================
+
 """Config flow for paperlesspaper integration."""
 from __future__ import annotations
 
@@ -113,23 +124,33 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry) -> OptionsFlow:
-        """Return the options flow."""
-        return PaperlessOptionsFlow(config_entry)
+        """Return the options flow.
+
+        Note: config_entry is passed by HA but not forwarded to the constructor —
+        PaperlessOptionsFlow accesses it via self.config_entry automatically.
+        """
+        return PaperlessOptionsFlow()
 
 
 class PaperlessOptionsFlow(OptionsFlow):
     """Handle options for paperlesspaper."""
 
-    def __init__(self, config_entry) -> None:
-        """Initialize."""
-        self._config_entry = config_entry
+    # No __init__ needed — self.config_entry is provided by HA automatically.
 
     async def async_step_init(self, user_input=None) -> ConfigFlowResult:
         """Manage options."""
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+        errors = {}
 
-        current_interval = self._config_entry.options.get(
+        if user_input is not None:
+            interval = user_input.get(CONF_POLLING_INTERVAL)
+            if interval is not None and interval < MIN_POLLING_INTERVAL:
+                errors[CONF_POLLING_INTERVAL] = "polling_interval_too_low"
+            elif interval is not None and interval > MAX_POLLING_INTERVAL:
+                errors[CONF_POLLING_INTERVAL] = "polling_interval_too_high"
+            else:
+                return self.async_create_entry(title="", data=user_input)
+
+        current_interval = self.config_entry.options.get(
             CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL
         )
 
@@ -139,9 +160,7 @@ class PaperlessOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_POLLING_INTERVAL,
                     default=current_interval,
-                ): vol.All(
-                    int,
-                    vol.Range(min=MIN_POLLING_INTERVAL, max=MAX_POLLING_INTERVAL),
-                ),
+                ): int,  # No Range here — validated manually above
             }),
+            errors=errors,
         )
