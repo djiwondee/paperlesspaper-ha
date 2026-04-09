@@ -30,8 +30,15 @@
         "title": "paperlesspaper Optionen",
         "data": {
           "polling_interval": "Abfrageintervall (Sekunden)"
+        },
+        "data_description": {
+          "polling_interval": "Wie oft HA die API abfragt (60–3600 Sekunden)."
         }
       }
+    },
+    "error": {
+      "polling_interval_too_low": "Das Abfrageintervall muss mindestens 60 Sekunden betragen.",
+      "polling_interval_too_high": "Das Abfrageintervall kann 3600 Sekunden nicht überschreiten."
     }
   },
   "services": {

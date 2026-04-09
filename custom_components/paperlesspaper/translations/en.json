@@ -30,8 +30,15 @@
         "title": "paperlesspaper options",
         "data": {
           "polling_interval": "Polling interval (seconds)"
+        },
+        "data_description": {
+          "polling_interval": "How often HA polls the API (60–3600 seconds)."
         }
       }
+    },
+    "error": {
+      "polling_interval_too_low": "Polling interval must be at least 60 seconds.",
+      "polling_interval_too_high": "Polling interval must not exceed 3600 seconds."
     }
   },
   "services": {
