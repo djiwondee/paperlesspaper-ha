@@ -37,6 +37,7 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             _LOGGER,
             name="paperlesspaper",
             update_interval=timedelta(seconds=polling_interval),
+            always_update=True,  # Always notify listeners, even if data unchanged
         )
         self.entry = entry
         self.api_key: str = entry.data[CONF_API_KEY]
