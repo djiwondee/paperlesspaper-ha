@@ -9,6 +9,9 @@
 #                      from voltage using ((V - 4.4) / (6.0 - 4.4) * 100)
 #                    - PaperlessBatVoltageSensor: raw voltage in V (mV -> V)
 # 2026-04-08  0.1.5  Moved PaperlessPictureSyncedSensor to binary_sensor.py
+# 2026-04-09  0.1.6  Fixed sensor updates: added _handle_coordinator_update to
+#                    PaperlessBaseSensor to ensure HA state machine is updated
+#                    on every coordinator poll cycle.
 # =============================================================================
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory, PERCENTAGE
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -76,6 +79,7 @@ class PaperlessBaseSensor(CoordinatorEntity, SensorEntity):
     _field: str
     _attr_icon: str = "mdi:image-frame"
     _attr_has_entity_name = True
+    _attr_force_update = True  # Always write state, even if value unchanged
 
     def __init__(
         self,
@@ -90,6 +94,17 @@ class PaperlessBaseSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = f"{device['id']}_{unique_suffix}"
         self._attr_translation_key = translation_key
         self._attr_device_info = _device_info(device)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator.
+
+        Called by CoordinatorEntity after every successful coordinator refresh.
+        Explicitly pushes the new state into the HA state machine so that
+        sensor values are updated on every poll cycle.
+        """
+
+        self.async_write_ha_state()
 
     @property
     def _device(self) -> dict | None:
@@ -121,7 +136,7 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
     _attr_device_class = SensorDeviceClass.BATTERY
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_entity_category = EntityCategory.DIAGNOSTIC # Not critical for primary device function
+    _attr_entity_category = EntityCategory.DIAGNOSTIC  # Not critical for primary device function
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -166,7 +181,7 @@ class PaperlessBatVoltageSensor(PaperlessBaseSensor):
     _attr_state_class = SensorStateClass.MEASUREMENT
     # Disabled by default — enable manually if raw voltage monitoring is needed
     _attr_entity_registry_enabled_default = False
-    _attr_entity_category = EntityCategory.DIAGNOSTIC # Not critical for primary device function
+    _attr_entity_category = EntityCategory.DIAGNOSTIC  # Not critical for primary device function
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -221,7 +236,7 @@ class PaperlessSleepTimeSensor(PaperlessBaseSensor):
     _field = "sleep_time"
     _attr_icon = "mdi:sleep"
     _attr_native_unit_of_measurement = "s"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC # Not critical for primary device function
+    _attr_entity_category = EntityCategory.DIAGNOSTIC  # Not critical for primary device function
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
