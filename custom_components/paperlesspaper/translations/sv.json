@@ -1,0 +1,102 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konfigurera paperlesspaper",
+        "description": "Ange din API-nyckel från paperlesspaper-appen.",
+        "data": {
+          "api_key": "API-nyckel"
+        }
+      },
+      "organization": {
+        "title": "Välj grupp",
+        "data": {
+          "organization_id": "Grupp"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ogiltig API-nyckel",
+      "cannot_connect": "Anslutningen misslyckades",
+      "no_organizations": "Ingen grupp hittades. Kontrollera att paperlesspaper-appen är tillgänglig och visar minst en grupp."
+    },
+    "abort": {
+      "already_configured": "Den här gruppen är redan konfigurerad."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "paperlesspaper-alternativ",
+        "data": {
+          "polling_interval": "Uppdateringsintervall (sekunder)"
+        },
+        "data_description": {
+          "polling_interval": "Hur ofta HA frågar API:et (60–3600 sekunder)."
+        }
+      }
+    },
+    "error": {
+      "polling_interval_too_low": "Uppdateringsintervallet måste vara minst 60 sekunder.",
+      "polling_interval_too_high": "Uppdateringsintervallet får inte överstiga 3600 sekunder."
+    }
+  },
+  "services": {
+    "upload_image": {
+      "name": "Ladda upp bild",
+      "description": "Ladda upp en bild till en paperlesspaper ePaper-display.",
+      "fields": {
+        "device_id": {
+          "name": "Enhet",
+          "description": "Den paperlesspaper ePaper-display som bilden ska laddas upp till."
+        },
+        "media_content_id": {
+          "name": "Bild",
+          "description": "Välj en bild från ditt mediebibliotek eller ange en direkt https://-URL."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bat_level": {
+        "name": "Batterinivå"
+      },
+      "bat_voltage": {
+        "name": "Batterispänning"
+      },
+      "next_device_sync": {
+        "name": "Nästa synkronisering"
+      },
+      "sleep_time": {
+        "name": "Vilolägesintervall"
+      },
+      "sleep_time_predict": {
+        "name": "Nästa bilduppdatering"
+      }
+    },
+    "binary_sensor": {
+      "reachable": {
+        "name": "Enhet nåbar"
+      },
+      "picture_synced": {
+        "name": "Bild synkroniserad",
+        "state": {
+          "on": "Synkroniserad",
+          "off": "Väntar"
+        }
+      },
+      "update_pending": {
+        "name": "Uppdatering väntande"
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Starta om enhet"
+      },
+      "reset_sensors": {
+        "name": "Återställ enhetssensorer"
+      }
+    }
+  }
+}
