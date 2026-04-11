@@ -77,7 +77,11 @@
     },
     "binary_sensor": {
       "reachable": {
-        "name": "Appareil accessible"
+        "name": "Appareil accessible",
+        "state": {
+          "on": "Connecté",
+          "off": "Déconnecté"
+        }
       },
       "picture_synced": {
         "name": "Image synchronisée",
@@ -87,7 +91,11 @@
         }
       },
       "update_pending": {
-        "name": "Mise à jour en attente"
+        "name": "Mise à jour en attente",
+        "state": {
+          "on": "En attente",
+          "off": "À jour"
+        }
       }
     },
     "button": {
