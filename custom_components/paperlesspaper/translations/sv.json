@@ -77,7 +77,11 @@
     },
     "binary_sensor": {
       "reachable": {
-        "name": "Enhet nåbar"
+        "name": "Enhet nåbar",
+        "state": {
+          "on": "Ansluten",
+          "off": "Ej nåbar"
+        }
       },
       "picture_synced": {
         "name": "Bild synkroniserad",
@@ -87,7 +91,11 @@
         }
       },
       "update_pending": {
-        "name": "Uppdatering väntande"
+        "name": "Uppdatering väntande",
+        "state": {
+          "on": "Väntande",
+          "off": "Aktuell"
+        }
       }
     },
     "button": {

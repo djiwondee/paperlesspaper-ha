@@ -77,7 +77,11 @@
     },
     "binary_sensor": {
       "reachable": {
-        "name": "Gerät erreichbar"
+        "name": "Gerät erreichbar",
+        "state": {
+          "on": "Verbunden",
+          "off": "Nicht erreichbar"
+        }
       },
       "picture_synced": {
         "name": "Bild synchronisiert",
@@ -87,7 +91,11 @@
         }
       },
       "update_pending": {
-        "name": "Update ausstehend"
+        "name": "Update ausstehend",
+        "state": {
+          "on": "Ausstehend",
+          "off": "Aktuell"
+        }
       }
     },
     "button": {
