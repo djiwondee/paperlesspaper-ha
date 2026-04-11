@@ -1,0 +1,102 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurer paperlesspaper",
+        "description": "Entrez votre clé API depuis l'application paperlesspaper.",
+        "data": {
+          "api_key": "Clé API"
+        }
+      },
+      "organization": {
+        "title": "Sélectionner un groupe",
+        "data": {
+          "organization_id": "Groupe"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Clé API invalide",
+      "cannot_connect": "Échec de la connexion",
+      "no_organizations": "Aucun groupe trouvé. Assurez-vous que l'application paperlesspaper est disponible et affiche au moins un groupe."
+    },
+    "abort": {
+      "already_configured": "Ce groupe est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options paperlesspaper",
+        "data": {
+          "polling_interval": "Intervalle d'interrogation (secondes)"
+        },
+        "data_description": {
+          "polling_interval": "À quelle fréquence HA interroge l'API (60–3600 secondes)."
+        }
+      }
+    },
+    "error": {
+      "polling_interval_too_low": "L'intervalle d'interrogation doit être d'au moins 60 secondes.",
+      "polling_interval_too_high": "L'intervalle d'interrogation ne doit pas dépasser 3600 secondes."
+    }
+  },
+  "services": {
+    "upload_image": {
+      "name": "Téléverser une image",
+      "description": "Téléverse une image vers un écran ePaper paperlesspaper.",
+      "fields": {
+        "device_id": {
+          "name": "Appareil",
+          "description": "L'écran ePaper paperlesspaper vers lequel téléverser."
+        },
+        "media_content_id": {
+          "name": "Image",
+          "description": "Sélectionnez une image depuis votre médiathèque ou fournissez une URL https:// directe."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bat_level": {
+        "name": "Niveau de batterie"
+      },
+      "bat_voltage": {
+        "name": "Tension de batterie"
+      },
+      "next_device_sync": {
+        "name": "Prochaine synchronisation"
+      },
+      "sleep_time": {
+        "name": "Intervalle de veille"
+      },
+      "sleep_time_predict": {
+        "name": "Prochaine mise à jour de l'image"
+      }
+    },
+    "binary_sensor": {
+      "reachable": {
+        "name": "Appareil accessible"
+      },
+      "picture_synced": {
+        "name": "Image synchronisée",
+        "state": {
+          "on": "Synchronisée",
+          "off": "En attente"
+        }
+      },
+      "update_pending": {
+        "name": "Mise à jour en attente"
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Redémarrer l'appareil"
+      },
+      "reset_sensors": {
+        "name": "Réinitialiser les capteurs"
+      }
+    }
+  }
+}

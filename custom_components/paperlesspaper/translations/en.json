@@ -9,19 +9,19 @@
         }
       },
       "organization": {
-        "title": "Select organization",
+        "title": "Select group",
         "data": {
-          "organization_id": "Organization"
+          "organization_id": "Group"
         }
       }
     },
     "error": {
       "invalid_auth": "Invalid API Key",
       "cannot_connect": "Connection failed",
-      "no_organizations": "No organization found. Make sure that the paperlesspaper app is available and displays at least one organization."
+      "no_organizations": "No group found. Make sure that the paperlesspaper app is available and displays at least one group."
     },
     "abort": {
-      "already_configured": "This organization is already configured."
+      "already_configured": "This group is already configured."
     }
   },
   "options": {
