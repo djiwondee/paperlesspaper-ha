@@ -1,0 +1,127 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "paperlesspaper instellen",
+        "description": "Voer je API-sleutel in vanuit de paperlesspaper-app.",
+        "data": {
+          "api_key": "API-sleutel"
+        }
+      },
+      "organization": {
+        "title": "Groep selecteren",
+        "description": "Selecteer de groep met je ePaper-apparaten. Elke groep wordt als een afzonderlijke integratie-invoer in Home Assistant ingesteld.",
+        "data": {
+          "organization_id": "Groep"
+        }
+      },
+      "devices": {
+        "title": "Apparaten gevonden",
+        "description": "{device_count} apparaat/apparaten gevonden in de geselecteerde groep. Deze apparaten worden aan Home Assistant toegevoegd. Klik op OK om te bevestigen.",
+        "data": {
+          "selected_devices": "Apparaten"
+        }
+      },
+      "reconfigure": {
+        "title": "paperlesspaper opnieuw configureren",
+        "description": "Werk de API-sleutel bij voor deze integratie-invoer. Je kunt daarna ook overschakelen naar een andere groep.",
+        "data": {
+          "api_key": "API-sleutel"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ongeldige API-sleutel",
+      "cannot_connect": "Verbinding mislukt",
+      "no_organizations": "Geen groep gevonden. Zorg ervoor dat de paperlesspaper-app beschikbaar is en minstens één groep weergeeft.",
+      "no_devices": "Geen apparaten gevonden in deze groep. Registreer eerst een apparaat in de paperlesspaper-app."
+    },
+    "abort": {
+      "already_configured": "Deze groep is al geconfigureerd.",
+      "reconfigure_successful": "Configuratie succesvol bijgewerkt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "paperlesspaper opties",
+        "data": {
+          "polling_interval": "Polling-interval (seconden)"
+        },
+        "data_description": {
+          "polling_interval": "Hoe vaak HA de API opvraagt (60–3600 seconden)."
+        }
+      }
+    },
+    "error": {
+      "polling_interval_too_low": "Het polling-interval moet minimaal 60 seconden zijn.",
+      "polling_interval_too_high": "Het polling-interval mag niet meer dan 3600 seconden zijn."
+    }
+  },
+  "services": {
+    "upload_image": {
+      "name": "Afbeelding uploaden",
+      "description": "Upload een afbeelding naar een paperlesspaper ePaper-display.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "Het paperlesspaper ePaper-display om naar te uploaden."
+        },
+        "media_content_id": {
+          "name": "Afbeelding",
+          "description": "Selecteer een afbeelding uit je mediabibliotheek of geef een directe https://-URL op."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bat_level": {
+        "name": "Batterijniveau"
+      },
+      "bat_voltage": {
+        "name": "Batterijspanning"
+      },
+      "next_device_sync": {
+        "name": "Volgende synchronisatie"
+      },
+      "sleep_time": {
+        "name": "Slaapinterval"
+      },
+      "sleep_time_predict": {
+        "name": "Volgende afbeeldingsupdate"
+      }
+    },
+    "binary_sensor": {
+      "reachable": {
+        "name": "Apparaat bereikbaar",
+        "state": {
+          "on": "Verbonden",
+          "off": "Niet bereikbaar"
+        }
+      },
+      "picture_synced": {
+        "name": "Afbeelding gesynchroniseerd",
+        "state": {
+          "on": "Gesynchroniseerd",
+          "off": "In behandeling"
+        }
+      },
+      "update_pending": {
+        "name": "Update in behandeling",
+        "state": {
+          "on": "In behandeling",
+          "off": "Up-to-date"
+        }
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Apparaat herstarten"
+      },
+      "reset_sensors": {
+        "name": "Apparaatsensoren resetten"
+      }
+    }
+  }
+}

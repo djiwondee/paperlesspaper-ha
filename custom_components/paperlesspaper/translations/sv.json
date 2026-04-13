@@ -10,18 +10,35 @@
       },
       "organization": {
         "title": "Välj grupp",
+        "description": "Välj den grupp som innehåller dina ePaper-enheter. Varje grupp läggs till som en separat integrationspost i Home Assistant.",
         "data": {
           "organization_id": "Grupp"
+        }
+      },
+      "devices": {
+        "title": "Enheter hittades",
+        "description": "{device_count} enhet(er) hittades i den valda gruppen. Dessa enheter läggs till i Home Assistant. Klicka på OK för att bekräfta.",
+        "data": {
+          "selected_devices": "Enheter"
+        }
+      },
+      "reconfigure": {
+        "title": "Omkonfigurera paperlesspaper",
+        "description": "Uppdatera API-nyckeln för den här integrationsposten. Du kan också byta till en annan grupp efteråt.",
+        "data": {
+          "api_key": "API-nyckel"
         }
       }
     },
     "error": {
       "invalid_auth": "Ogiltig API-nyckel",
       "cannot_connect": "Anslutningen misslyckades",
-      "no_organizations": "Ingen grupp hittades. Kontrollera att paperlesspaper-appen är tillgänglig och visar minst en grupp."
+      "no_organizations": "Ingen grupp hittades. Kontrollera att paperlesspaper-appen är tillgänglig och visar minst en grupp.",
+      "no_devices": "Inga enheter hittades i den här gruppen. Registrera en enhet i paperlesspaper-appen först."
     },
     "abort": {
-      "already_configured": "Den här gruppen är redan konfigurerad."
+      "already_configured": "Den här gruppen är redan konfigurerad.",
+      "reconfigure_successful": "Konfigurationen uppdaterades."
     }
   },
   "options": {

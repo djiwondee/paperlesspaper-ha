@@ -12,6 +12,12 @@
 # 2026-04-09  0.1.6  Fixed sensor updates: added _handle_coordinator_update to
 #                    PaperlessBaseSensor to ensure HA state machine is updated
 #                    on every coordinator poll cycle.
+# 2026-04-11  0.2.0  Dynamic entity discovery: startup entities are added
+#                    directly from coordinator.data (guaranteed to be populated
+#                    after async_config_entry_first_refresh). A coordinator
+#                    listener handles devices added later without a restart.
+#                    Removed devices are NOT auto-removed — their entities
+#                    remain in HA and become unavailable.
 # =============================================================================
 
 from __future__ import annotations
@@ -24,7 +30,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, PERCENTAGE
+from homeassistant.const import PERCENTAGE, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -43,22 +49,57 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up paperlesspaper sensors."""
+    """Set up paperlesspaper sensors.
+
+    Adds sensor entities for all devices currently known to the coordinator
+    (coordinator.data is always populated at this point because
+    async_config_entry_first_refresh has already run in __init__.py).
+
+    A coordinator listener is also registered to detect devices that are
+    added to the paperlesspaper organization later — those entities are
+    registered dynamically without requiring a restart.
+    """
     coordinator: PaperlessCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    entities = []
-    for device in coordinator.data:
-        entities.extend(
-            [
-                PaperlessBatLevelSensor(coordinator, device),
-                PaperlessBatVoltageSensor(coordinator, device),
-                PaperlessNextSyncSensor(coordinator, device),
-                PaperlessSleepTimeSensor(coordinator, device),
-                PaperlessSleepTimePredictSensor(coordinator, device),
-            ]
-        )
+    # Seed known_device_ids with all devices present at startup and add
+    # their entities immediately — this is the reliable path.
+    known_device_ids: set[str] = set()
+    initial_entities = []
+    for device in coordinator.data or []:
+        known_device_ids.add(device["id"])
+        initial_entities.extend(_sensors_for_device(coordinator, device))
 
-    async_add_entities(entities)
+    if initial_entities:
+        async_add_entities(initial_entities)
+
+    # Listener for devices added after initial setup.
+    @callback
+    def _async_add_sensors_for_new_devices() -> None:
+        """Detect new devices on every coordinator refresh and add their sensors."""
+        new_entities = []
+        for device in coordinator.data or []:
+            if device["id"] not in known_device_ids:
+                known_device_ids.add(device["id"])
+                new_entities.extend(_sensors_for_device(coordinator, device))
+        if new_entities:
+            async_add_entities(new_entities)
+
+    entry.async_on_unload(
+        coordinator.async_add_listener(_async_add_sensors_for_new_devices)
+    )
+
+
+def _sensors_for_device(
+    coordinator: PaperlessCoordinator, device: dict
+) -> list:
+    """Return all sensor entities for a single device."""
+    return [
+        PaperlessBatLevelSensor(coordinator, device),
+        PaperlessBatVoltageSensor(coordinator, device),
+        PaperlessNextSyncSensor(coordinator, device),
+        PaperlessSleepTimeSensor(coordinator, device),
+        PaperlessSleepTimePredictSensor(coordinator, device),
+    ]
 
 
 def _device_info(device: dict) -> DeviceInfo:
@@ -97,18 +138,16 @@ class PaperlessBaseSensor(CoordinatorEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator.
-
-        Called by CoordinatorEntity after every successful coordinator refresh.
-        Explicitly pushes the new state into the HA state machine so that
-        sensor values are updated on every poll cycle.
-        """
-
+        """Push updated state to HA on every coordinator refresh."""
         self.async_write_ha_state()
 
     @property
     def _device(self) -> dict | None:
-        """Return current device data from coordinator."""
+        """Return current device data from coordinator.
+
+        Returns None when the device is no longer returned by the API —
+        the entity stays in HA and becomes unavailable until removed manually.
+        """
         return next(
             (d for d in self.coordinator.data if d["id"] == self._device_id),
             None,
@@ -136,7 +175,7 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
     _attr_device_class = SensorDeviceClass.BATTERY
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_entity_category = EntityCategory.DIAGNOSTIC  # Not critical for primary device function
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -161,7 +200,6 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
                 / (BAT_VOLTAGE_MAX - BAT_VOLTAGE_MIN)
                 * 100
             )
-            # Clamp to valid range to handle out-of-range hardware readings
             return max(0, min(100, round(percentage)))
         except (ValueError, TypeError):
             return None
@@ -181,7 +219,7 @@ class PaperlessBatVoltageSensor(PaperlessBaseSensor):
     _attr_state_class = SensorStateClass.MEASUREMENT
     # Disabled by default — enable manually if raw voltage monitoring is needed
     _attr_entity_registry_enabled_default = False
-    _attr_entity_category = EntityCategory.DIAGNOSTIC  # Not critical for primary device function
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -236,7 +274,7 @@ class PaperlessSleepTimeSensor(PaperlessBaseSensor):
     _field = "sleep_time"
     _attr_icon = "mdi:sleep"
     _attr_native_unit_of_measurement = "s"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC  # Not critical for primary device function
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""

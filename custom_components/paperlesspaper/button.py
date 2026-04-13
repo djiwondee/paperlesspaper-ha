@@ -1,4 +1,13 @@
 """Button platform for paperlesspaper."""
+# =============================================================================
+# CHANGE HISTORY
+# 2026-04-11  0.2.0  Dynamic entity discovery: startup entities are added
+#                    directly from coordinator.data (guaranteed to be populated
+#                    after async_config_entry_first_refresh). A coordinator
+#                    listener handles devices added later without a restart.
+#                    Removed devices are NOT auto-removed — their entities
+#                    remain in HA and become unavailable.
+# =============================================================================
 
 from __future__ import annotations
 
@@ -8,7 +17,7 @@ import aiohttp
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -26,19 +35,54 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up paperlesspaper buttons."""
+    """Set up paperlesspaper buttons.
+
+    Adds button entities for all devices currently known to the coordinator
+    (coordinator.data is always populated at this point because
+    async_config_entry_first_refresh has already run in __init__.py).
+
+    A coordinator listener is also registered to detect devices that are
+    added to the paperlesspaper organization later — those entities are
+    registered dynamically without requiring a restart.
+    """
     coordinator: PaperlessCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    entities = []
-    for device in coordinator.data:
-        entities.extend(
-            [
-                PaperlessRebootButton(coordinator, device),
-                PaperlessResetButton(coordinator, device),
-            ]
-        )
+    # Seed known_device_ids with all devices present at startup and add
+    # their entities immediately — this is the reliable path.
+    known_device_ids: set[str] = set()
+    initial_entities = []
+    for device in coordinator.data or []:
+        known_device_ids.add(device["id"])
+        initial_entities.extend(_buttons_for_device(coordinator, device))
 
-    async_add_entities(entities)
+    if initial_entities:
+        async_add_entities(initial_entities)
+
+    # Listener for devices added after initial setup.
+    @callback
+    def _async_add_buttons_for_new_devices() -> None:
+        """Detect new devices on every coordinator refresh and add their buttons."""
+        new_entities = []
+        for device in coordinator.data or []:
+            if device["id"] not in known_device_ids:
+                known_device_ids.add(device["id"])
+                new_entities.extend(_buttons_for_device(coordinator, device))
+        if new_entities:
+            async_add_entities(new_entities)
+
+    entry.async_on_unload(
+        coordinator.async_add_listener(_async_add_buttons_for_new_devices)
+    )
+
+
+def _buttons_for_device(
+    coordinator: PaperlessCoordinator, device: dict
+) -> list:
+    """Return all button entities for a single device."""
+    return [
+        PaperlessRebootButton(coordinator, device),
+        PaperlessResetButton(coordinator, device),
+    ]
 
 
 def _device_info(device: dict) -> DeviceInfo:
