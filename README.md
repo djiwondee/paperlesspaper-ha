@@ -7,13 +7,13 @@
 
 Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directly from Home Assistant — including automations, scripts, and the full HA media library.
 
-<img width="1036" height="332" alt="Integration Entries" src="https://github.com/user-attachments/assets/844ac9b7-d7ec-4200-bafb-df9a1d9181d3" />
+<img width="1015" height="322" alt="Bildschirmfoto 2026-04-13 um 14 48 30" src="https://github.com/user-attachments/assets/7235282a-dfd3-45f7-962d-a7245830c4af" />
 
 ---
 
 ## Features
 
-<img width="2054" height="1624" alt="Device Overview" src="https://github.com/user-attachments/assets/5625a723-1827-4cd2-9281-4cf375809f54" />
+<img width="1003" height="956" alt="Bildschirmfoto 2026-04-13 um 14 46 46" src="https://github.com/user-attachments/assets/a8f10d9a-88f7-421e-a057-244e308cdb31" />
 
 - **Automatic device discovery** - Devices in your paperlesspaper organization appear automatically in HA
 - **Multi-device support** — Manage multiple ePaper displays from a single integration entry
@@ -65,8 +65,14 @@ Before installing this integration you need:
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **paperlesspaper**
 3. Enter your API key
+<img width="587" height="307" alt="Bildschirmfoto 2026-04-13 um 14 45 24" src="https://github.com/user-attachments/assets/8eb3effe-c79a-4c8f-a336-272b2801cc3f" />
+
 4. **Select a group** — all available groups are shown, even if only one exists. Each group is set up as a separate integration entry in Home Assistant.
+<img width="585" height="313" alt="Bildschirmfoto 2026-04-13 um 14 45 55" src="https://github.com/user-attachments/assets/500552bc-2e52-4175-9bae-cb16494435b1" />
+
 5. **Confirm devices** — all ePaper devices found in the selected group are listed with checkboxes. They are pre-selected so you can see exactly what will be added. Click **OK** to confirm.
+<img width="585" height="312" alt="Bildschirmfoto 2026-04-13 um 14 46 12" src="https://github.com/user-attachments/assets/2dafba95-92ee-4846-9a0d-c6505da96662" />
+
 
 All devices in the group are discovered automatically. No further manual configuration is required.
 
