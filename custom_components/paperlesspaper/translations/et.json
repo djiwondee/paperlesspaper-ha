@@ -1,0 +1,127 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "paperlesspaper seadistamine",
+        "description": "Sisesta oma API-võti paperlesspaper rakendusest.",
+        "data": {
+          "api_key": "API-võti"
+        }
+      },
+      "organization": {
+        "title": "Vali rühm",
+        "description": "Vali rühm, mis sisaldab sinu ePaper-seadmeid. Iga rühm lisatakse Home Assistanti eraldi integratsioonikirjena.",
+        "data": {
+          "organization_id": "Rühm"
+        }
+      },
+      "devices": {
+        "title": "Seadmed leitud",
+        "description": "Valitud rühmast leiti {device_count} seade(t). Need seadmed lisatakse Home Assistanti. Kinnitamiseks klõpsa OK.",
+        "data": {
+          "selected_devices": "Seadmed"
+        }
+      },
+      "reconfigure": {
+        "title": "paperlesspaper ümberseadistamine",
+        "description": "Uuenda selle integratsioonikirje API-võtit. Seejärel saad ka teise rühma valida.",
+        "data": {
+          "api_key": "API-võti"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Vigane API-võti",
+      "cannot_connect": "Ühendamine ebaõnnestus",
+      "no_organizations": "Rühma ei leitud. Veendu, et paperlesspaper rakendus on saadaval ja kuvab vähemalt ühe rühma.",
+      "no_devices": "Sellest rühmast ei leitud ühtegi seadet. Palun registreeri esmalt seade paperlesspaper rakenduses."
+    },
+    "abort": {
+      "already_configured": "See rühm on juba seadistatud.",
+      "reconfigure_successful": "Seadistus edukalt uuendatud."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "paperlesspaper suvandid",
+        "data": {
+          "polling_interval": "Küsitlusintervall (sekundid)"
+        },
+        "data_description": {
+          "polling_interval": "Kui tihti HA API-d küsitleb (60–3600 sekundit)."
+        }
+      }
+    },
+    "error": {
+      "polling_interval_too_low": "Küsitlusintervall peab olema vähemalt 60 sekundit.",
+      "polling_interval_too_high": "Küsitlusintervall ei tohi ületada 3600 sekundit."
+    }
+  },
+  "services": {
+    "upload_image": {
+      "name": "Laadi pilt üles",
+      "description": "Laadi pilt paperlesspaper ePaper-ekraanile.",
+      "fields": {
+        "device_id": {
+          "name": "Seade",
+          "description": "paperlesspaper ePaper-ekraan, kuhu üles laadida."
+        },
+        "media_content_id": {
+          "name": "Pilt",
+          "description": "Vali pilt oma meediaraamatukogust või sisesta otse https:// URL."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bat_level": {
+        "name": "Aku tase"
+      },
+      "bat_voltage": {
+        "name": "Aku pinge"
+      },
+      "next_device_sync": {
+        "name": "Järgmine sünkroonimine"
+      },
+      "sleep_time": {
+        "name": "Uneintervall"
+      },
+      "sleep_time_predict": {
+        "name": "Järgmine pildivärskendus"
+      }
+    },
+    "binary_sensor": {
+      "reachable": {
+        "name": "Seade on ligipääsetav",
+        "state": {
+          "on": "Ühendatud",
+          "off": "Ligipääsmatu"
+        }
+      },
+      "picture_synced": {
+        "name": "Pilt sünkroonitud",
+        "state": {
+          "on": "Sünkroonitud",
+          "off": "Ootel"
+        }
+      },
+      "update_pending": {
+        "name": "Uuendus ootel",
+        "state": {
+          "on": "Ootel",
+          "off": "Ajakohane"
+        }
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Taaskäivita seade"
+      },
+      "reset_sensors": {
+        "name": "Lähtesta seadme andurid"
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-0.1.9-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -60,15 +60,32 @@ Before installing this integration you need:
 
 ## Configuration
 
+### Setup
+
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **paperlesspaper**
 3. Enter your API key
-4. If you have multiple organizations, select the one containing your devices
-5. Click **Submit** — all your devices are discovered automatically
+4. **Select a group** — all available groups are shown, even if only one exists. Each group is set up as a separate integration entry in Home Assistant.
+5. **Confirm devices** — all ePaper devices found in the selected group are listed with checkboxes. They are pre-selected so you can see exactly what will be added. Click **OK** to confirm.
+
+All devices in the group are discovered automatically. No further manual configuration is required.
+
+> **Note:** If you add a new device to your paperlesspaper group later, it will be detected automatically on the next poll cycle — no restart required.
+
+### Reconfigure
+
+If you need to update your API key or switch to a different group, use the **Reconfigure** option:
+
+1. Go to **Settings → Devices & Services → paperlesspaper**
+2. Click the **three-dot menu (⋮)** next to the integration entry
+3. Select **Reconfigure**
+4. Enter the new API key and select the desired group
+
+The integration reloads automatically after reconfiguration.
 
 ### Options
 
-After setup you can adjust the polling interval under **Settings → Devices & Services → paperlesspaper → Configure**:
+After setup you can adjust the polling interval under **Settings → Devices & Services → paperlesspaper → ⚙️ Configure**:
 
 | Option | Default | Min | Max | Description |
 | --- | --- | --- | --- | --- |
@@ -77,6 +94,7 @@ After setup you can adjust the polling interval under **Settings → Devices & S
 <img width="600" height="271" alt="Configuring Polling Option" src="https://github.com/user-attachments/assets/e9066b63-5c5f-43b2-944f-a0bae8180eb1" />
 
 > **Note:** After changing the polling interval the integration reloads automatically.
+
 
 ### Localization
 
@@ -90,6 +108,9 @@ Currently supported languages:
 | Deutsch | de |
 | Français | fr |
 | Svenska | sv |
+| Nederlands | nl |
+| Eesti      | et |
+| Čeština    | cs |
 
 > **Note:** After changing the language, don't miss to clear your browser cache.
 
@@ -215,9 +236,19 @@ automation:
 
 ## How it works
 
-The integration polls the paperlesspaper API every 5 minutes. Each poll calls `GET /devices/ping/:id?dataResponse=false` per device — this single endpoint returns both the reachability status and the full device telemetry (battery, sync status, firmware version, next wake-up time, etc.).
+The integration polls the paperlesspaper API every 5 minutes (configurable). Each poll calls `GET /devices/ping/:id?dataResponse=false` per device — this single endpoint returns both the reachability status and the full device telemetry (battery, sync status, firmware version, next wake-up time, etc.).
+
+### Device discovery
+
+During setup, all devices in the selected group are discovered automatically and added to Home Assistant. If new devices are added to the group in the paperlesspaper app at a later point, they are detected on the next poll cycle and their entities (sensors, binary sensors, buttons) are registered without requiring a restart.
+
+Devices that are removed from the paperlesspaper app are **not** automatically removed from Home Assistant. They remain visible but become **unavailable**. To remove them, delete them manually in Home Assistant under **Settings → Devices & Services → paperlesspaper → [device] → Delete**.
+
+### Papers
 
 On first setup — and on every HA restart — the integration validates that a dedicated paper (screen slot) exists for each device. If the paper was deleted in the paperlesspaper app, a new one is created automatically.
+
+### Image uploads
 
 Image uploads use the `POST /papers/uploadSingleImage` endpoint. The API compares each new image against the current one and skips the upload if they are too similar — this avoids unnecessary ePaper refresh cycles which extend display lifetime.
 

@@ -10,18 +10,35 @@
       },
       "organization": {
         "title": "Gruppe auswählen",
+        "description": "Wähle die Gruppe aus, die deine ePaper Geräte enthält. Jede Gruppe wird als eigener Integrationseintrag in Home Assistant angelegt.",
         "data": {
           "organization_id": "Gruppe"
+        }
+      },
+      "devices": {
+        "title": "Geräte gefunden",
+        "description": "{device_count} Gerät(e) in der gewählten Gruppe gefunden. Diese Geräte werden Home Assistant hinzugefügt. Klicke auf OK, um zu bestätigen.",
+        "data": {
+          "selected_devices": "Geräte"
+        }
+      },
+      "reconfigure": {
+        "title": "paperlesspaper neu konfigurieren",
+        "description": "Aktualisiere den API Key für diesen Integrationseintrag. Du kannst anschließend auch eine andere Gruppe auswählen.",
+        "data": {
+          "api_key": "API Key"
         }
       }
     },
     "error": {
       "invalid_auth": "Ungültiger API Key",
       "cannot_connect": "Verbindung fehlgeschlagen",
-      "no_organizations": "Keine Gruppe gefunden. Stelle sicher, dass die paperlesspaper App verwendet werden kann und mindestens eine Gruppe angezeigt wird."
+      "no_organizations": "Keine Gruppe gefunden. Stelle sicher, dass die paperlesspaper App verwendet werden kann und mindestens eine Gruppe angezeigt wird.",
+      "no_devices": "Keine Geräte in dieser Gruppe gefunden. Bitte registriere zuerst ein Gerät in der paperlesspaper App."
     },
     "abort": {
-      "already_configured": "Diese Gruppe ist bereits eingerichtet."
+      "already_configured": "Diese Gruppe ist bereits eingerichtet.",
+      "reconfigure_successful": "Konfiguration erfolgreich aktualisiert."
     }
   },
   "options": {

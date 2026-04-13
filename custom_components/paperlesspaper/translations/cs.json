@@ -1,0 +1,127 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nastavení paperlesspaper",
+        "description": "Zadejte svůj API klíč z aplikace paperlesspaper.",
+        "data": {
+          "api_key": "API klíč"
+        }
+      },
+      "organization": {
+        "title": "Vybrat skupinu",
+        "description": "Vyberte skupinu obsahující vaše ePaper zařízení. Každá skupina je v Home Assistantu nastavena jako samostatný integrační záznam.",
+        "data": {
+          "organization_id": "Skupina"
+        }
+      },
+      "devices": {
+        "title": "Nalezená zařízení",
+        "description": "Ve vybrané skupině bylo nalezeno {device_count} zařízení. Tato zařízení budou přidána do Home Assistantu. Potvrďte kliknutím na OK.",
+        "data": {
+          "selected_devices": "Zařízení"
+        }
+      },
+      "reconfigure": {
+        "title": "Překonfigurovat paperlesspaper",
+        "description": "Aktualizujte API klíč pro tento integrační záznam. Poté můžete také přepnout na jinou skupinu.",
+        "data": {
+          "api_key": "API klíč"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Neplatný API klíč",
+      "cannot_connect": "Připojení selhalo",
+      "no_organizations": "Nebyla nalezena žádná skupina. Ujistěte se, že aplikace paperlesspaper je dostupná a zobrazuje alespoň jednu skupinu.",
+      "no_devices": "V této skupině nebyla nalezena žádná zařízení. Nejprve zaregistrujte zařízení v aplikaci paperlesspaper."
+    },
+    "abort": {
+      "already_configured": "Tato skupina je již nakonfigurována.",
+      "reconfigure_successful": "Konfigurace byla úspěšně aktualizována."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Možnosti paperlesspaper",
+        "data": {
+          "polling_interval": "Interval dotazování (sekundy)"
+        },
+        "data_description": {
+          "polling_interval": "Jak často HA dotazuje API (60–3600 sekund)."
+        }
+      }
+    },
+    "error": {
+      "polling_interval_too_low": "Interval dotazování musí být alespoň 60 sekund.",
+      "polling_interval_too_high": "Interval dotazování nesmí překročit 3600 sekund."
+    }
+  },
+  "services": {
+    "upload_image": {
+      "name": "Nahrát obrázek",
+      "description": "Nahraje obrázek na ePaper displej paperlesspaper.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "ePaper displej paperlesspaper, na který se má nahrát."
+        },
+        "media_content_id": {
+          "name": "Obrázek",
+          "description": "Vyberte obrázek z mediální knihovny nebo zadejte přímou https:// URL."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bat_level": {
+        "name": "Úroveň baterie"
+      },
+      "bat_voltage": {
+        "name": "Napětí baterie"
+      },
+      "next_device_sync": {
+        "name": "Další synchronizace"
+      },
+      "sleep_time": {
+        "name": "Interval spánku"
+      },
+      "sleep_time_predict": {
+        "name": "Další aktualizace obrázku"
+      }
+    },
+    "binary_sensor": {
+      "reachable": {
+        "name": "Zařízení dostupné",
+        "state": {
+          "on": "Připojeno",
+          "off": "Nedostupné"
+        }
+      },
+      "picture_synced": {
+        "name": "Obrázek synchronizován",
+        "state": {
+          "on": "Synchronizováno",
+          "off": "Čeká"
+        }
+      },
+      "update_pending": {
+        "name": "Aktualizace čeká",
+        "state": {
+          "on": "Čeká",
+          "off": "Aktuální"
+        }
+      }
+    },
+    "button": {
+      "reboot": {
+        "name": "Restartovat zařízení"
+      },
+      "reset_sensors": {
+        "name": "Resetovat senzory zařízení"
+      }
+    }
+  }
+}
