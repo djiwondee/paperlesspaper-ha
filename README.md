@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 

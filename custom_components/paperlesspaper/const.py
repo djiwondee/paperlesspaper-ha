@@ -7,9 +7,9 @@
 
 DOMAIN = "paperlesspaper"
 
-PLATFORMS = ["sensor", "binary_sensor", "button"]
+PLATFORMS = ["binary_sensor", "button", "sensor"]
 
-API_BASE_URL = "https://api.memo.wirewire.de/v1"
+API_BASE_URL = "https://api.paperlesspaper.de/v1"
 
 CONF_API_KEY = "api_key"
 CONF_ORGANIZATION_ID = "organization_id"
