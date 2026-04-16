@@ -17,7 +17,7 @@
       },
       "devices": {
         "title": "Devices found",
-        "description": "{device_count} device(s) found in the selected group. These devices will be added to Home Assistant. Click OK to confirm.",
+        "description": "{device_count} device(s) found in the selected group. These devices will be added to Home Assistant. Click Submit to confirm.",
         "data": {
           "selected_devices": "Devices"
         }
