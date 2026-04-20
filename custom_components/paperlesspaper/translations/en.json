@@ -17,10 +17,7 @@
       },
       "devices": {
         "title": "Devices found",
-        "description": "{device_count} device(s) found in the selected group. These devices will be added to Home Assistant. Click Submit to confirm.",
-        "data": {
-          "selected_devices": "Devices"
-        }
+        "description": "{device_count} device(s) found in the selected group and will be added to Home Assistant:\n\n{device_list}\n\nClick Submit to confirm."
       },
       "reconfigure": {
         "title": "Reconfigure paperlesspaper",
@@ -83,13 +80,13 @@
         "name": "Battery Voltage"
       },
       "next_device_sync": {
-        "name": "Next Sync"
+        "name": "Update Interval"
       },
       "sleep_time": {
         "name": "Sleep Interval"
       },
       "sleep_time_predict": {
-        "name": "Next Image Update"
+        "name": "Predicted Sleep Interval"
       }
     },
     "binary_sensor": {

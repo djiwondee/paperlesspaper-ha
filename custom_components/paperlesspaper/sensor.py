@@ -18,6 +18,16 @@
 #                    listener handles devices added later without a restart.
 #                    Removed devices are NOT auto-removed — their entities
 #                    remain in HA and become unavailable.
+# 2026-04-20  0.2.3  sleep_time_predict: marked as EntityCategory.DIAGNOSTIC
+#                    and disabled by default (_attr_entity_registry_enabled_default
+#                    = False). Clarified docstring: describes the predicted sleep
+#                    duration, NOT the next image display time.
+#                    sleep_time: removed EntityCategory.DIAGNOSTIC — sensor stays
+#                    visible in main Sensors section (not Diagnostic).
+#                    next_device_sync: corrected label — renamed from "Next Sync"
+#                    to "Update Interval" (EN) / "Aktualisierungsintervall" (DE).
+#                    It describes the device's periodic wake/check interval, not
+#                    a one-time sync event.
 # =============================================================================
 
 from __future__ import annotations
@@ -200,6 +210,7 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
                 / (BAT_VOLTAGE_MAX - BAT_VOLTAGE_MIN)
                 * 100
             )
+            # Clamp to valid range to handle out-of-range hardware readings
             return max(0, min(100, round(percentage)))
         except (ValueError, TypeError):
             return None
@@ -240,7 +251,17 @@ class PaperlessBatVoltageSensor(PaperlessBaseSensor):
 
 
 class PaperlessNextSyncSensor(PaperlessBaseSensor):
-    """Sensor: next device sync as datetime object."""
+    """Sensor: next scheduled device wake-up time as datetime.
+
+    The API field 'nextDeviceSync' contains the timestamp at which the device
+    is scheduled to wake up and check for new content. This represents the
+    device's periodic update interval — NOT a one-time sync event and NOT the
+    time at which a newly uploaded image will be displayed.
+
+    Translation key: next_device_sync
+    EN label: "Update Interval"
+    DE label: "Aktualisierungsintervall"
+    """
 
     _field = "next_device_sync"
     _attr_icon = "mdi:clock-outline"
@@ -267,14 +288,19 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
 class PaperlessSleepTimeSensor(PaperlessBaseSensor):
     """Sensor: configured sleep interval in seconds.
 
-    This is the sleep interval configured on the device. The new value
-    only takes effect after the device has fetched it on its next wake cycle.
+    This is the sleep duration currently configured on the device firmware.
+    It describes how long the device sleeps between wake cycles.
+    A new value only takes effect after the device fetches it on its next
+    wake cycle.
+
+    Note: This is the raw configured value — not a prediction and not a
+    timestamp indicating when the next image will be displayed.
     """
 
     _field = "sleep_time"
     _attr_icon = "mdi:sleep"
     _attr_native_unit_of_measurement = "s"
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    # No entity_category — sensor remains visible in the main Sensors section
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -282,15 +308,27 @@ class PaperlessSleepTimeSensor(PaperlessBaseSensor):
 
 
 class PaperlessSleepTimePredictSensor(PaperlessBaseSensor):
-    """Sensor: predicted time in seconds until the next image update on the display.
+    """Sensor: predicted sleep interval in seconds until the next device wake-up.
 
-    This is the predicted duration until the device wakes up and displays
-    the next image. More relevant to the user than the configured sleep time.
+    This is the API's prediction of how long the device will sleep in its
+    current cycle. It differs from sleep_time (the configured value) in that
+    it reflects the device's actual expected behavior based on current state.
+
+    Important: This sensor does NOT indicate when a newly uploaded image will
+    appear on the display — it only describes the predicted sleep duration of
+    the current wake/sleep cycle.
+
+    Marked as diagnostic and disabled by default, as it is rarely needed
+    for day-to-day automations. Enable manually if sleep prediction monitoring
+    is required.
     """
 
     _field = "sleep_time_predict"
     _attr_icon = "mdi:sleep"
     _attr_native_unit_of_measurement = "s"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    # Disabled by default — enable manually if sleep prediction monitoring is needed
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
