@@ -7,5 +7,5 @@
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "requirements": ["aiohttp>=3.9.0", "aiofiles>=23.0.0"],
-  "version": "0.2.4"
+  "version": "0.2.3"
 }
