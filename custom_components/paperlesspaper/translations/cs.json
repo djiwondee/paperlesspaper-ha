@@ -17,10 +17,7 @@
       },
       "devices": {
         "title": "Nalezená zařízení",
-        "description": "Ve vybrané skupině bylo nalezeno {device_count} zařízení. Tato zařízení budou přidána do Home Assistantu. Potvrďte kliknutím na OK.",
-        "data": {
-          "selected_devices": "Zařízení"
-        }
+        "description": "Ve vybrané skupině bylo nalezeno {device_count} zařízení. Tato zařízení budou přidána do Home Assistantu:\n\n{device_list}\n\nPotvrďte kliknutím na OK."
       },
       "reconfigure": {
         "title": "Překonfigurovat paperlesspaper",
@@ -83,13 +80,13 @@
         "name": "Napětí baterie"
       },
       "next_device_sync": {
-        "name": "Další synchronizace"
+        "name": "Interval aktualizace"
       },
       "sleep_time": {
         "name": "Interval spánku"
       },
       "sleep_time_predict": {
-        "name": "Další aktualizace obrázku"
+        "name": "Předpokládaný interval spánku"
       }
     },
     "binary_sensor": {

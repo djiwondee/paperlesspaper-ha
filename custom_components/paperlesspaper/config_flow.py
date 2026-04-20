@@ -22,6 +22,13 @@
 # 2026-04-11  0.2.1  Added async_step_reconfigure: allows changing the API key
 #                    and/or organization for an existing config entry without
 #                    deleting and re-adding the integration.
+# 2026-04-20  0.2.3  devices step: replaced checkbox SelectSelector with a
+#                    plain summary screen. The device list is shown as text in
+#                    the description placeholder — no form field, no false
+#                    promise that de-selecting a device has any effect.
+#                    The config entry always covers all devices in the
+#                    organization. Removed selected_devices from data_schema
+#                    and all related SelectSelector imports.
 # =============================================================================
 
 """Config flow for paperlesspaper integration."""
@@ -33,12 +40,6 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import (
-    SelectOptionDict,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
-)
 
 from .const import (
     API_BASE_URL,
@@ -58,12 +59,17 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
     Initial setup flow (3 steps):
         1. async_step_user         — enter & validate API key
         2. async_step_organization — select organization (always shown)
-        3. async_step_devices      — review discovered devices & confirm
+        3. async_step_devices      — summary of discovered devices, confirm
 
     Reconfigure flow (re-uses steps 2 & 3 after re-validating the API key):
         1. async_step_reconfigure  — enter & validate new API key
         2. async_step_organization — select organization
-        3. async_step_devices      — review devices & confirm
+        3. async_step_devices      — summary of discovered devices, confirm
+
+    Note on the devices step: the config entry always covers ALL devices in
+    the selected organization. The devices step is purely informational —
+    it shows which devices will be added so the user can confirm, but there
+    is no selection that affects which devices are actually managed.
     """
 
     VERSION = 1
@@ -192,7 +198,9 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
         # Pre-select the currently configured org when reconfiguring.
         current_org_id = ""
         if self._reconfigure:
-            current_org_id = self._get_reconfigure_entry().data.get(CONF_ORGANIZATION_ID, "")
+            current_org_id = self._get_reconfigure_entry().data.get(
+                CONF_ORGANIZATION_ID, ""
+            )
 
         org_options = {org["id"]: org["name"] for org in self._organizations}
 
@@ -208,51 +216,39 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     # ------------------------------------------------------------------
-    # Step 3: Device overview & confirmation (multi-select checkboxes)
+    # Step 3: Device summary (informational only — no form fields)
     # ------------------------------------------------------------------
 
     async def async_step_devices(self, user_input=None) -> ConfigFlowResult:
-        """Step 3: Show discovered devices as checkboxes and confirm setup.
+        """Step 3: Show a plain summary of discovered devices and confirm.
 
-        All devices in the organization are shown as a multi-select
-        checkbox list, pre-selected. The user submits to confirm.
+        This step is purely informational. The config entry always covers
+        ALL devices in the organization — there is no selection that would
+        affect which devices are managed. Showing checkboxes would imply
+        that de-selecting a device has an effect, which it does not.
 
-        The config entry covers the full organization — all devices are
-        managed by the coordinator regardless of which boxes are checked.
-        The checkbox selection is purely informational so the user knows
-        exactly which devices will appear in Home Assistant.
+        The device names are rendered as a simple list in the description
+        placeholder so the user knows exactly what will be added before
+        clicking Submit.
         """
         if user_input is not None:
             if self._reconfigure:
                 return await self._async_update_entry(self._selected_org)
             return await self._create_entry(self._selected_org)
 
-        device_options = [
-            SelectOptionDict(
-                value=device["id"],
-                label=device.get("meta", {}).get("name") or device["id"],
-            )
-            for device in self._devices
-        ]
-
-        all_device_ids = [device["id"] for device in self._devices]
+        # Build a plain text device list for the description placeholder.
+        # Each device is shown as "• Device Name" on its own line.
+        device_list = "\n".join(
+            f"• {d.get('meta', {}).get('name') or d['id']}"
+            for d in self._devices
+        )
 
         return self.async_show_form(
             step_id="devices",
-            data_schema=vol.Schema({
-                vol.Required(
-                    "selected_devices",
-                    default=all_device_ids,
-                ): SelectSelector(
-                    SelectSelectorConfig(
-                        options=device_options,
-                        multiple=True,
-                        mode=SelectSelectorMode.LIST,
-                    )
-                ),
-            }),
+            data_schema=vol.Schema({}),  # No fields — summary screen only
             description_placeholders={
                 "device_count": str(len(self._devices)),
+                "device_list": device_list,
             },
         )
 

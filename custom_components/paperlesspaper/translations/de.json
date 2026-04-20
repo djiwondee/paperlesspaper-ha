@@ -17,10 +17,7 @@
       },
       "devices": {
         "title": "Geräte gefunden",
-        "description": "{device_count} Gerät(e) in der gewählten Gruppe gefunden. Diese Geräte werden Home Assistant hinzugefügt. Klicke auf OK, um zu bestätigen.",
-        "data": {
-          "selected_devices": "Geräte"
-        }
+        "description": "{device_count} Gerät(e) in der gewählten Gruppe gefunden. Diese Geräte werden Home Assistant hinzugefügt:\n\n{device_list}\n\nKlicke auf OK, um zu bestätigen."
       },
       "reconfigure": {
         "title": "paperlesspaper neu konfigurieren",
@@ -83,13 +80,13 @@
         "name": "Batteriespannung"
       },
       "next_device_sync": {
-        "name": "Nächste Synchronisierung"
+        "name": "Aktualisierungsintervall"
       },
       "sleep_time": {
         "name": "Ruheintervall"
       },
       "sleep_time_predict": {
-        "name": "Nächstes Bild-Update"
+        "name": "Vorhergesagtes Ruheintervall"
       }
     },
     "binary_sensor": {

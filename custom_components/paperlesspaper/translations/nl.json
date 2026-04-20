@@ -2,74 +2,71 @@
   "config": {
     "step": {
       "user": {
-        "title": "paperlesspaper instellen",
-        "description": "Voer je API-sleutel in vanuit de paperlesspaper-app.",
+        "title": "Konfigurera paperlesspaper",
+        "description": "Ange din API-nyckel från paperlesspaper-appen.",
         "data": {
-          "api_key": "API-sleutel"
+          "api_key": "API-nyckel"
         }
       },
       "organization": {
-        "title": "Groep selecteren",
-        "description": "Selecteer de groep met je ePaper-apparaten. Elke groep wordt als een afzonderlijke integratie-invoer in Home Assistant ingesteld.",
+        "title": "Välj grupp",
+        "description": "Välj den grupp som innehåller dina ePaper-enheter. Varje grupp läggs till som en separat integrationspost i Home Assistant.",
         "data": {
-          "organization_id": "Groep"
+          "organization_id": "Grupp"
         }
       },
       "devices": {
-        "title": "Apparaten gevonden",
-        "description": "{device_count} apparaat/apparaten gevonden in de geselecteerde groep. Deze apparaten worden aan Home Assistant toegevoegd. Klik op OK om te bevestigen.",
-        "data": {
-          "selected_devices": "Apparaten"
-        }
+        "title": "Enheter hittades",
+        "description": "{device_count} enhet(er) hittades i den valda gruppen och kommer att läggas till i Home Assistant:\n\n{device_list}\n\nKlicka på OK för att bekräfta."
       },
       "reconfigure": {
-        "title": "paperlesspaper opnieuw configureren",
-        "description": "Werk de API-sleutel bij voor deze integratie-invoer. Je kunt daarna ook overschakelen naar een andere groep.",
+        "title": "Omkonfigurera paperlesspaper",
+        "description": "Uppdatera API-nyckeln för den här integrationsposten. Du kan också byta till en annan grupp efteråt.",
         "data": {
-          "api_key": "API-sleutel"
+          "api_key": "API-nyckel"
         }
       }
     },
     "error": {
-      "invalid_auth": "Ongeldige API-sleutel",
-      "cannot_connect": "Verbinding mislukt",
-      "no_organizations": "Geen groep gevonden. Zorg ervoor dat de paperlesspaper-app beschikbaar is en minstens één groep weergeeft.",
-      "no_devices": "Geen apparaten gevonden in deze groep. Registreer eerst een apparaat in de paperlesspaper-app."
+      "invalid_auth": "Ogiltig API-nyckel",
+      "cannot_connect": "Anslutningen misslyckades",
+      "no_organizations": "Ingen grupp hittades. Kontrollera att paperlesspaper-appen är tillgänglig och visar minst en grupp.",
+      "no_devices": "Inga enheter hittades i den här gruppen. Registrera en enhet i paperlesspaper-appen först."
     },
     "abort": {
-      "already_configured": "Deze groep is al geconfigureerd.",
-      "reconfigure_successful": "Configuratie succesvol bijgewerkt."
+      "already_configured": "Den här gruppen är redan konfigurerad.",
+      "reconfigure_successful": "Konfigurationen uppdaterades."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "paperlesspaper opties",
+        "title": "paperlesspaper-alternativ",
         "data": {
-          "polling_interval": "Polling-interval (seconden)"
+          "polling_interval": "Uppdateringsintervall (sekunder)"
         },
         "data_description": {
-          "polling_interval": "Hoe vaak HA de API opvraagt (60–3600 seconden)."
+          "polling_interval": "Hur ofta HA frågar API:et (60–3600 sekunder)."
         }
       }
     },
     "error": {
-      "polling_interval_too_low": "Het polling-interval moet minimaal 60 seconden zijn.",
-      "polling_interval_too_high": "Het polling-interval mag niet meer dan 3600 seconden zijn."
+      "polling_interval_too_low": "Uppdateringsintervallet måste vara minst 60 sekunder.",
+      "polling_interval_too_high": "Uppdateringsintervallet får inte överstiga 3600 sekunder."
     }
   },
   "services": {
     "upload_image": {
-      "name": "Afbeelding uploaden",
-      "description": "Upload een afbeelding naar een paperlesspaper ePaper-display.",
+      "name": "Ladda upp bild",
+      "description": "Ladda upp en bild till en paperlesspaper ePaper-display.",
       "fields": {
         "device_id": {
-          "name": "Apparaat",
-          "description": "Het paperlesspaper ePaper-display om naar te uploaden."
+          "name": "Enhet",
+          "description": "Den paperlesspaper ePaper-display som bilden ska laddas upp till."
         },
         "media_content_id": {
-          "name": "Afbeelding",
-          "description": "Selecteer een afbeelding uit je mediabibliotheek of geef een directe https://-URL op."
+          "name": "Bild",
+          "description": "Välj en bild från ditt mediebibliotek eller ange en direkt https://-URL."
         }
       }
     }
@@ -77,50 +74,50 @@
   "entity": {
     "sensor": {
       "bat_level": {
-        "name": "Batterijniveau"
+        "name": "Batterinivå"
       },
       "bat_voltage": {
-        "name": "Batterijspanning"
+        "name": "Batterispänning"
       },
       "next_device_sync": {
-        "name": "Volgende synchronisatie"
+        "name": "Uppdateringsintervall"
       },
       "sleep_time": {
-        "name": "Slaapinterval"
+        "name": "Vilolägesintervall"
       },
       "sleep_time_predict": {
-        "name": "Volgende afbeeldingsupdate"
+        "name": "Förutsagt vilolägesintervall"
       }
     },
     "binary_sensor": {
       "reachable": {
-        "name": "Apparaat bereikbaar",
+        "name": "Enhet nåbar",
         "state": {
-          "on": "Verbonden",
-          "off": "Niet bereikbaar"
+          "on": "Ansluten",
+          "off": "Ej nåbar"
         }
       },
       "picture_synced": {
-        "name": "Afbeelding gesynchroniseerd",
+        "name": "Bild synkroniserad",
         "state": {
-          "on": "Gesynchroniseerd",
-          "off": "In behandeling"
+          "on": "Synkroniserad",
+          "off": "Väntar"
         }
       },
       "update_pending": {
-        "name": "Update in behandeling",
+        "name": "Uppdatering väntande",
         "state": {
-          "on": "In behandeling",
-          "off": "Up-to-date"
+          "on": "Väntande",
+          "off": "Aktuell"
         }
       }
     },
     "button": {
       "reboot": {
-        "name": "Apparaat herstarten"
+        "name": "Starta om enhet"
       },
       "reset_sensors": {
-        "name": "Apparaatsensoren resetten"
+        "name": "Återställ enhetssensorer"
       }
     }
   }

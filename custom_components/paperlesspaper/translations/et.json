@@ -17,10 +17,7 @@
       },
       "devices": {
         "title": "Seadmed leitud",
-        "description": "Valitud rühmast leiti {device_count} seade(t). Need seadmed lisatakse Home Assistanti. Kinnitamiseks klõpsa OK.",
-        "data": {
-          "selected_devices": "Seadmed"
-        }
+        "description": "{device_count} seade(t) leiti valitud rühmast ja lisatakse Home Assistanti:\n\n{device_list}\n\nKinnitamiseks klõpsa OK."
       },
       "reconfigure": {
         "title": "paperlesspaper ümberseadistamine",
@@ -83,13 +80,13 @@
         "name": "Aku pinge"
       },
       "next_device_sync": {
-        "name": "Järgmine sünkroonimine"
+        "name": "Uuendusintervall"
       },
       "sleep_time": {
         "name": "Uneintervall"
       },
       "sleep_time_predict": {
-        "name": "Järgmine pildivärskendus"
+        "name": "Prognoositud uneintervall"
       }
     },
     "binary_sensor": {

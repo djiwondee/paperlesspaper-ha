@@ -17,10 +17,7 @@
       },
       "devices": {
         "title": "Appareils trouvés",
-        "description": "{device_count} appareil(s) trouvé(s) dans le groupe sélectionné. Ces appareils seront ajoutés à Home Assistant. Cliquez sur OK pour confirmer.",
-        "data": {
-          "selected_devices": "Appareils"
-        }
+        "description": "{device_count} appareil(s) trouvé(s) dans le groupe sélectionné. Ces appareils seront ajoutés à Home Assistant :\n\n{device_list}\n\nCliquez sur OK pour confirmer."
       },
       "reconfigure": {
         "title": "Reconfigurer paperlesspaper",
@@ -83,13 +80,13 @@
         "name": "Tension de batterie"
       },
       "next_device_sync": {
-        "name": "Prochaine synchronisation"
+        "name": "Intervalle de mise à jour"
       },
       "sleep_time": {
         "name": "Intervalle de veille"
       },
       "sleep_time_predict": {
-        "name": "Prochaine mise à jour de l'image"
+        "name": "Intervalle de veille prévu"
       }
     },
     "binary_sensor": {
