@@ -28,6 +28,13 @@
 #                    to "Update Interval" (EN) / "Aktualisierungsintervall" (DE).
 #                    It describes the device's periodic wake/check interval, not
 #                    a one-time sync event.
+# 2026-04-20  0.2.4  Fixed UTC timestamp display: coordinator now stores
+#                    next_device_sync as a timezone-aware datetime object (UTC)
+#                    instead of an ISO string. PaperlessNextSyncSensor.native_value
+#                    returns the datetime directly — no fromisoformat() conversion
+#                    needed. This ensures HA correctly converts and displays the
+#                    timestamp in the user's local timezone everywhere (UI,
+#                    history, logbook, Activities).
 # =============================================================================
 
 from __future__ import annotations
@@ -258,6 +265,9 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
     device's periodic update interval — NOT a one-time sync event and NOT the
     time at which a newly uploaded image will be displayed.
 
+    The coordinator stores this value as a timezone-aware datetime object (UTC).
+    HA automatically converts it to the user's local timezone for display.
+
     Translation key: next_device_sync
     EN label: "Update Interval"
     DE label: "Aktualisierungsintervall"
@@ -273,16 +283,15 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
 
     @property
     def native_value(self) -> datetime | None:
-        """Return next sync as datetime object."""
+        """Return next sync as a timezone-aware datetime object (UTC).
+
+        The coordinator already provides a datetime object — no conversion
+        needed here. HA uses the timezone info to display the correct local
+        time in the UI, history, and logbook.
+        """
         if self._device is None:
             return None
-        iso_str = self._device.get("next_device_sync")
-        if iso_str is None:
-            return None
-        try:
-            return datetime.fromisoformat(iso_str)
-        except (ValueError, TypeError):
-            return None
+        return self._device.get("next_device_sync")
 
 
 class PaperlessSleepTimeSensor(PaperlessBaseSensor):

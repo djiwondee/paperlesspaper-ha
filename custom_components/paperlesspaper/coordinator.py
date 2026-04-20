@@ -1,9 +1,22 @@
 """DataUpdateCoordinator for paperlesspaper."""
+# =============================================================================
+# CHANGE HISTORY
+# 2026-04-20  0.2.4  Fixed UTC timestamp handling: _ms_timestamp_to_datetime
+#                    now returns a timezone-aware datetime object (UTC) instead
+#                    of an ISO string. Returning a string caused HA to display
+#                    incorrect local times because fromisoformat() on Python
+#                    < 3.11 silently dropped the timezone offset. Storing a
+#                    datetime object directly ensures HA always receives a
+#                    timezone-aware value and converts it correctly.
+#                    Kept timezone.utc (datetime.UTC requires Python 3.11+, not yet guaranteed)
+#
+# =============================================================================
+
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import json
 import logging
-from datetime import datetime, timedelta, timezone
 
 import aiohttp
 
@@ -166,14 +179,21 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         return paper_id
 
     @staticmethod
-    def _ms_timestamp_to_datetime(ms_timestamp: int | None) -> str | None:
-        """Convert a millisecond epoch timestamp to ISO datetime string."""
+    def _ms_timestamp_to_datetime(ms_timestamp: int | None) -> datetime | None:
+        """Convert a millisecond epoch timestamp to a timezone-aware datetime (UTC).
+
+        Returns a datetime object — NOT a string — so that HA receives a
+        proper timezone-aware value and can convert it to the user's local
+        timezone for display in the UI, history, and logbook.
+
+        Returning an ISO string caused incorrect local times because
+        fromisoformat() on Python < 3.11 silently dropped the timezone offset.
+        Uses timezone.utc for compatibility (datetime.UTC requires Python 3.11+).
+        """
         if ms_timestamp is None:
             return None
         try:
-            return datetime.fromtimestamp(
-                ms_timestamp / 1000, tz=timezone.utc
-            ).isoformat()
+            return datetime.fromtimestamp(ms_timestamp / 1000, tz=timezone.utc) # noqa: UP017
         except (ValueError, OSError):
             return None
 
@@ -184,6 +204,9 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         - reachable: bool
         - iotDevice fields (fwVersion, serialNumber, ...)
         - deviceStatus fields (pictureSynced, batLevel, nextDeviceSync, ...)
+
+        Timestamp fields (e.g. next_device_sync) are stored as timezone-aware
+        datetime objects (UTC) so HA can display and convert them correctly.
         """
         try:
             async with self._session.get(
@@ -211,6 +234,7 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                     "serial_number": iot.get("serialNumber"),
                     "picture_synced": status.get("pictureSynced"),
                     "bat_level": status.get("batLevel"),
+                    # Stored as timezone-aware datetime (UTC); sensor reads directly
                     "next_device_sync": self._ms_timestamp_to_datetime(next_sync_ms),
                     "sleep_time": status.get("sleepTime"),
                     "sleep_time_predict": status.get("sleepTimePredict"),
