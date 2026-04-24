@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -20,8 +20,9 @@ Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directl
 - **Device sensors** — Monitor battery level, sync status, next wake-up time, sleep time, and more
 - **Connectivity sensor** — Monitor whether your display is reachable
 - **Update sensor** — Know when an update is available
-- **Reset/Reboot Button** - Gorce a soft init of your ePaper device
+- **Reset/Reboot Button** - Force a soft init of your ePaper device
 - **upload_image action** — Send any image from HA media sources to your ePaper display
+- **Force new paper** — Optionally create a fresh paper slot before uploading (useful for first-time setup or after clearing papers in the app)
 - **Automation-ready** — Trigger image updates from time schedules, sensors, or any HA event
 
 ---
@@ -70,9 +71,8 @@ Before installing this integration you need:
 4. **Select a group** — all available groups are shown, even if only one exists. Each group is set up as a separate integration entry in Home Assistant.
 <img width="585" height="313" alt="Bildschirmfoto 2026-04-13 um 14 45 55" src="https://github.com/user-attachments/assets/500552bc-2e52-4175-9bae-cb16494435b1" />
 
-5. **Confirm devices** — all ePaper devices found in the selected group are listed with checkboxes. They are pre-selected so you can see exactly what will be added. Click **OK** to confirm.
+5. **Confirm devices** — all ePaper devices found in the selected group are listed. Click **Submit** to confirm.
 <img width="585" height="312" alt="Bildschirmfoto 2026-04-13 um 14 46 12" src="https://github.com/user-attachments/assets/2dafba95-92ee-4846-9a0d-c6505da96662" />
-
 
 All devices in the group are discovered automatically. No further manual configuration is required.
 
@@ -104,7 +104,7 @@ After setup you can adjust the polling interval under **Settings → Devices & S
 
 ### Localization
 
-The integration supports multiple languages. Entity names, buttons, and configuration dialogs are automatically displayed in the language set in your Home Assistant system preferences. To change the language go to **Settings → System → Home Information → Region Section** to set your language**.
+The integration supports multiple languages. Entity names, buttons, and configuration dialogs are automatically displayed in the language set in your Home Assistant system preferences. To change the language go to **Settings → System → Home Information → Region Section** to set your language.
 
 Currently supported languages:
 
@@ -118,7 +118,7 @@ Currently supported languages:
 | Eesti      | et |
 | Čeština    | cs |
 
-> **Note:** After changing the language, don't miss to clear your browser cache.
+> **Note:** After changing the language, don't forget to clear your browser cache.
 
 ---
 
@@ -135,14 +135,14 @@ For each ePaper device the integration creates:
 | `sensor.<device>_next_sync` | Next scheduled wake-up time | datetime |
 | `sensor.<device>_sleep_time` | Configured sleep interval | s |
 | `sensor.<device>_sleep_time_predicted` | Predicted sleep interval | s |
-| `sensor.<device>_picture_synced` | Whether the current image is synced | — |
 
 ### Binary Sensors
 
 | Entity | Description |
 |---|---|
 | `binary_sensor.<device>_reachable` | `on` if the device is reachable |
-| `binary_sensor.<device>_update_pending` | `on` if an update is available |
+| `binary_sensor.<device>_picture_synced` | `on` if the current picture is synced to the display |
+| `binary_sensor.<device>_update_pending` | `on` if an update is pending |
 
 ### Buttons
 
@@ -161,10 +161,17 @@ For each ePaper device the integration creates:
 
 Upload an image to an ePaper display.
 
-| Parameter | Required | Description |
-|---|---|---|
-| `device_id` | Yes | The paperlesspaper device to upload to |
-| `media_content_id` | Yes | Image selected via the HA Media Picker, or a direct `https://` URL |
+| Parameter | Required | Default | Description |
+|---|---|---|---|
+| `device_id` | Yes | — | The paperlesspaper device to upload to |
+| `media_content_id` | Yes | — | Image selected via the HA Media Picker, or a direct `https://` URL |
+| `reuse_existing_paper` | No | `true` | When enabled (default), the existing paper slot is reused. When disabled, a new paper is created before uploading and saved as the new default for this device |
+
+#### reuse_existing_paper
+
+By default the integration reuses the paper slot that was created during initial setup. Toggle **Reuse existing paper** off when you want to force the creation of a fresh paper slot — for example after manually deleting papers in the paperlesspaper app, or when setting up a replacement device.
+
+> **Note:** When a new paper is created, its ID is automatically persisted as the new default for the device. Subsequent uploads will use this new paper unless the toggle is disabled again.
 
 The `media_content_id` field supports two formats:
 
@@ -238,6 +245,24 @@ automation:
         media_content_id: https://example.com/daily-image.jpg
 ```
 
+### Force a new paper slot before uploading
+
+```yaml
+automation:
+  alias: "ePaper update with new paper"
+  trigger:
+    - platform: time
+      at: "09:00:00"
+  action:
+    - action: paperlesspaper.upload_image
+      data:
+        device_id: <your_device_id>
+        reuse_existing_paper: false
+        media_content_id:
+          media_content_id: media-source://media_source/local/morning.png
+          media_content_type: image/png
+```
+
 ---
 
 ## How it works
@@ -253,6 +278,8 @@ Devices that are removed from the paperlesspaper app are **not** automatically r
 ### Papers
 
 On first setup — and on every HA restart — the integration validates that a dedicated paper (screen slot) exists for each device. If the paper was deleted in the paperlesspaper app, a new one is created automatically.
+
+When `reuse_existing_paper` is set to `false` in the `upload_image` action, a new paper is created unconditionally before the upload, and its Paper ID is persisted as the default for selected device default of this action.
 
 ### Image uploads
 

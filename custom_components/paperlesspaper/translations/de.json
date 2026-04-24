@@ -4,16 +4,12 @@
       "user": {
         "title": "paperlesspaper einrichten",
         "description": "Gib deinen API Key aus der paperlesspaper App ein.",
-        "data": {
-          "api_key": "API Key"
-        }
+        "data": { "api_key": "API Key" }
       },
       "organization": {
         "title": "Gruppe auswählen",
         "description": "Wähle die Gruppe aus, die deine ePaper Geräte enthält. Jede Gruppe wird als eigener Integrationseintrag in Home Assistant angelegt.",
-        "data": {
-          "organization_id": "Gruppe"
-        }
+        "data": { "organization_id": "Gruppe" }
       },
       "devices": {
         "title": "Geräte gefunden",
@@ -22,9 +18,7 @@
       "reconfigure": {
         "title": "paperlesspaper neu konfigurieren",
         "description": "Aktualisiere den API Key für diesen Integrationseintrag. Du kannst anschließend auch eine andere Gruppe auswählen.",
-        "data": {
-          "api_key": "API Key"
-        }
+        "data": { "api_key": "API Key" }
       }
     },
     "error": {
@@ -42,12 +36,8 @@
     "step": {
       "init": {
         "title": "paperlesspaper Optionen",
-        "data": {
-          "polling_interval": "Abfrageintervall (Sekunden)"
-        },
-        "data_description": {
-          "polling_interval": "Wie oft HA die API abfragt (60–3600 Sekunden)."
-        }
+        "data": { "polling_interval": "Abfrageintervall (Sekunden)" },
+        "data_description": { "polling_interval": "Wie oft HA die API abfragt (60–3600 Sekunden)." }
       }
     },
     "error": {
@@ -67,58 +57,39 @@
         "media_content_id": {
           "name": "Bild",
           "description": "Wähle ein Bild aus der Medienbibliothek oder gib eine direkte https:// URL an."
+        },
+        "reuse_existing_paper": {
+          "name": "Vorhandenes Paper wiederverwenden",
+          "description": "Wenn aktiviert (Standard), wird die vorhandene Paper-ID wiederverwendet. Wenn deaktiviert, wird vor dem Hochladen ein neues Paper erstellt und dessen ID als neuer Standard für das ausgewählte Gerät gespeichert."
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "bat_level": {
-        "name": "Batteriepegel"
-      },
-      "bat_voltage": {
-        "name": "Batteriespannung"
-      },
-      "next_device_sync": {
-        "name": "Aktualisierungsintervall"
-      },
-      "sleep_time": {
-        "name": "Ruheintervall"
-      },
-      "sleep_time_predict": {
-        "name": "Vorhergesagtes Ruheintervall"
-      }
+      "bat_level": { "name": "Batteriepegel" },
+      "bat_voltage": { "name": "Batteriespannung" },
+      "next_device_sync": { "name": "Aktualisierungsintervall" },
+      "sleep_time": { "name": "Ruheintervall" },
+      "sleep_time_predict": { "name": "Vorhergesagtes Ruheintervall" }
     },
     "binary_sensor": {
       "reachable": {
         "name": "Gerät erreichbar",
-        "state": {
-          "on": "Verbunden",
-          "off": "Nicht erreichbar"
-        }
+        "state": { "on": "Verbunden", "off": "Nicht erreichbar" }
       },
       "picture_synced": {
         "name": "Bild synchronisiert",
-        "state": {
-          "on": "Synchronisiert",
-          "off": "Ausstehend"
-        }
+        "state": { "on": "Synchronisiert", "off": "Ausstehend" }
       },
       "update_pending": {
         "name": "Update ausstehend",
-        "state": {
-          "on": "Ausstehend",
-          "off": "Aktuell"
-        }
+        "state": { "on": "Ausstehend", "off": "Aktuell" }
       }
     },
     "button": {
-      "reboot": {
-        "name": "Gerät neu starten"
-      },
-      "reset_sensors": {
-        "name": "Gerätesensoren zurücksetzen"
-      }
+      "reboot": { "name": "Gerät neu starten" },
+      "reset_sensors": { "name": "Gerätesensoren zurücksetzen" }
     }
   }
 }
