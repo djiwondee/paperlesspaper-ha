@@ -7,13 +7,13 @@
 
 Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directly from Home Assistant — including automations, scripts, and the full HA media library.
 
-<img width="1015" height="322" alt="Bildschirmfoto 2026-04-13 um 14 48 30" src="https://github.com/user-attachments/assets/7235282a-dfd3-45f7-962d-a7245830c4af" />
+<img width="902" height="405" alt="Bildschirmfoto 2026-04-24 um 12 08 28" src="https://github.com/user-attachments/assets/13ebf385-4c69-4a78-82b1-46e60679401a" />
 
 ---
 
 ## Features
 
-<img width="1003" height="956" alt="Bildschirmfoto 2026-04-13 um 14 46 46" src="https://github.com/user-attachments/assets/a8f10d9a-88f7-421e-a057-244e308cdb31" />
+<img width="921" height="947" alt="Bildschirmfoto 2026-04-24 um 12 11 31" src="https://github.com/user-attachments/assets/b8ec6500-4da3-4cf0-9bc1-a0ed894120dc" />
 
 - **Automatic device discovery** - Devices in your paperlesspaper organization appear automatically in HA
 - **Multi-device support** — Manage multiple ePaper displays from a single integration entry
@@ -72,7 +72,7 @@ Before installing this integration you need:
 <img width="585" height="313" alt="Bildschirmfoto 2026-04-13 um 14 45 55" src="https://github.com/user-attachments/assets/500552bc-2e52-4175-9bae-cb16494435b1" />
 
 5. **Confirm devices** — all ePaper devices found in the selected group are listed. Click **Submit** to confirm.
-<img width="585" height="312" alt="Bildschirmfoto 2026-04-13 um 14 46 12" src="https://github.com/user-attachments/assets/2dafba95-92ee-4846-9a0d-c6505da96662" />
+<img width="585" height="306" alt="Bildschirmfoto 2026-04-24 um 12 07 39" src="https://github.com/user-attachments/assets/e3cd6071-8533-4c78-8728-e3b925800dc2" />
 
 All devices in the group are discovered automatically. No further manual configuration is required.
 
@@ -105,6 +105,8 @@ After setup you can adjust the polling interval under **Settings → Devices & S
 ### Localization
 
 The integration supports multiple languages. Entity names, buttons, and configuration dialogs are automatically displayed in the language set in your Home Assistant system preferences. To change the language go to **Settings → System → Home Information → Region Section** to set your language.
+
+As a native German speaker with good English, I have provided translations for both languages. All other translations are machine-generated and try to follow the terminology currently used in the official paperlesspaper app. If you notice any inaccuracies or would like to contribute an improved translation for your language, pull requests are very welcome.
 
 Currently supported languages:
 
@@ -161,6 +163,8 @@ For each ePaper device the integration creates:
 
 Upload an image to an ePaper display.
 
+<img width="914" height="542" alt="image" src="https://github.com/user-attachments/assets/df6053eb-3d11-434f-8640-fa125efec333" />
+
 | Parameter | Required | Default | Description |
 |---|---|---|---|
 | `device_id` | Yes | — | The paperlesspaper device to upload to |
@@ -169,7 +173,7 @@ Upload an image to an ePaper display.
 
 #### reuse_existing_paper
 
-By default the integration reuses the paper slot that was created during initial setup. Toggle **Reuse existing paper** off when you want to force the creation of a fresh paper slot — for example after manually deleting papers in the paperlesspaper app, or when setting up a replacement device.
+By default the integration reuses the paper slot that was created during initial setup. Toggle **Reuse existing paper** off when you want to force the creation of a fresh paper slot — for example after manually deleting papers in the paperlesspaper app, or when setting up a replacement device. When the toggle is _switched to off_, any papers with already published images remain untouched in the app — which is useful if you want to keep a history of previously displayed content or switch back to an earlier image directly from the paperlesspaper app.
 
 > **Note:** When a new paper is created, its ID is automatically persisted as the new default for the device. Subsequent uploads will use this new paper unless the toggle is disabled again.
 
@@ -183,7 +187,6 @@ data:
     media_content_id: media-source://media_source/local/my_image.png
     media_content_type: image/png
 ```
-<img width="1086" height="461" alt="Select Image Source using Media Picker" src="https://github.com/user-attachments/assets/acc28458-04a2-4d25-b6d6-5671fa6233bd" />
 
 **Direct URL** — pass any public `https://` URL as a plain string:
 
