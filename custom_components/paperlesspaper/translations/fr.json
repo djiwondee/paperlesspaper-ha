@@ -67,6 +67,10 @@
         "media_content_id": {
           "name": "Image",
           "description": "Sélectionnez une image depuis votre médiathèque ou fournissez une URL https:// directe."
+        },
+        "reuse_existing_paper": {
+          "name": "Réutiliser le papier existant",
+          "description": "Si activé (par défaut), l'identifiant de papier existant est réutilisé. Si désactivé, un nouveau papier est créé avant le téléversement et son identifiant est enregistré comme valeur par défaut pour cet appareil."
         }
       }
     }

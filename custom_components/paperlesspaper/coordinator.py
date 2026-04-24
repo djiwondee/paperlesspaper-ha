@@ -9,7 +9,11 @@
 #                    datetime object directly ensures HA always receives a
 #                    timezone-aware value and converts it correctly.
 #                    Kept timezone.utc (datetime.UTC requires Python 3.11+, not yet guaranteed)
-#
+# 2026-04-22  0.2.5  Added public method create_paper_and_store(): creates a
+#                    new paper via the API unconditionally and persists the
+#                    resulting paper_id as the device default in
+#                    config_entry.data. Called by the upload_image service
+#                    when force_new_paper=True.
 # =============================================================================
 
 from __future__ import annotations
@@ -135,8 +139,28 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             )
             return None
 
+    async def create_paper_and_store(self, device_id: str) -> str | None:
+        """Create a new paper unconditionally and persist the paper_id.
+
+        Public method called by the upload_image service when
+        force_new_paper=True. Unlike _ensure_paper_id(), this method always
+        creates a brand-new paper regardless of any previously stored value,
+        then saves the new paper_id as the device default.
+
+        Returns the new paper_id on success, or None if creation failed.
+        """
+        paper_id = await self._create_paper(device_id)
+        if paper_id:
+            await self._store_paper_id(device_id, paper_id)
+        return paper_id
+
     async def _ensure_paper_id(self, device_id: str, device: dict) -> str | None:
-        """Ensure a valid paper_id exists for a device."""
+        """Ensure a valid paper_id exists for a device.
+
+        Called during the regular coordinator poll cycle. Validates the stored
+        paper_id against the API and falls back to the device's own paper
+        field or creates a new one if neither is available.
+        """
         stored_paper_id = self.get_paper_id(device_id)
 
         if stored_paper_id:
@@ -193,7 +217,7 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         if ms_timestamp is None:
             return None
         try:
-            return datetime.fromtimestamp(ms_timestamp / 1000, tz=timezone.utc) # noqa: UP017
+            return datetime.fromtimestamp(ms_timestamp / 1000, tz=timezone.utc)  # noqa: UP017
         except (ValueError, OSError):
             return None
 
@@ -216,7 +240,9 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                 timeout=aiohttp.ClientTimeout(total=15),
             ) as resp:
                 if resp.status != 200:
-                    _LOGGER.debug("Ping %s -> not reachable (HTTP %s)", device_id, resp.status)
+                    _LOGGER.debug(
+                        "Ping %s -> not reachable (HTTP %s)", device_id, resp.status
+                    )
                     return {"reachable": False}
 
                 data = await resp.json()

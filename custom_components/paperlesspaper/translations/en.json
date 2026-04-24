@@ -30,7 +30,7 @@
     "error": {
       "invalid_auth": "Invalid API Key",
       "cannot_connect": "Connection failed",
-      "no_organizations": "No group found. Make sure that the paperlesspaper app is available and displays at least one group.",
+      "no_organizations": "No group found. Please create a group in the paperlesspaper app first.",
       "no_devices": "No devices found in this group. Please register a device in the paperlesspaper app first."
     },
     "abort": {
@@ -46,7 +46,7 @@
           "polling_interval": "Polling interval (seconds)"
         },
         "data_description": {
-          "polling_interval": "How often HA polls the API (60–3600 seconds)."
+          "polling_interval": "How often HA polls the API (60-3600 seconds)."
         }
       }
     },
@@ -67,58 +67,39 @@
         "media_content_id": {
           "name": "Image",
           "description": "Select an image from your media library or provide a direct https:// URL."
+        },
+        "reuse_existing_paper": {
+          "name": "Reuse existing paper",
+          "description": "If enabled (default), the existing paper ID is reused. If disabled, a new paper is created before uploading and its ID is saved as the new default for the selected device."
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "bat_level": {
-        "name": "Battery Level"
-      },
-      "bat_voltage": {
-        "name": "Battery Voltage"
-      },
-      "next_device_sync": {
-        "name": "Update Interval"
-      },
-      "sleep_time": {
-        "name": "Sleep Interval"
-      },
-      "sleep_time_predict": {
-        "name": "Predicted Sleep Interval"
-      }
+      "bat_level": { "name": "Battery Level" },
+      "bat_voltage": { "name": "Battery Voltage" },
+      "next_device_sync": { "name": "Update Interval" },
+      "sleep_time": { "name": "Sleep Interval" },
+      "sleep_time_predict": { "name": "Predicted Sleep Interval" }
     },
     "binary_sensor": {
       "reachable": {
         "name": "Device Reachable",
-        "state": {
-          "on": "Connected",
-          "off": "Disconnected"
-        }
+        "state": { "on": "Connected", "off": "Disconnected" }
       },
       "picture_synced": {
         "name": "Picture Synced",
-        "state": {
-          "on": "Synced",
-          "off": "Pending"
-        }
+        "state": { "on": "Synced", "off": "Pending" }
       },
       "update_pending": {
         "name": "Update Pending",
-        "state": {
-          "on": "Pending",
-          "off": "Up-to-date"
-        }
+        "state": { "on": "Pending", "off": "Up-to-date" }
       }
     },
     "button": {
-      "reboot": {
-        "name": "Reboot Device"
-      },
-      "reset_sensors": {
-        "name": "Reset Device Sensors"
-      }
+      "reboot": { "name": "Reboot Device" },
+      "reset_sensors": { "name": "Reset Device Sensors" }
     }
   }
 }

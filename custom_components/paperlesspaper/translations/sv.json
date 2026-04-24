@@ -67,6 +67,10 @@
         "media_content_id": {
           "name": "Bild",
           "description": "Välj en bild från ditt mediebibliotek eller ange en direkt https://-URL."
+        },
+        "reuse_existing_paper": {
+          "name": "Återanvänd befintligt paper",
+          "description": "Om aktiverat (standard) återanvänds det befintliga paper-ID:t. Om inaktiverat skapas ett nytt paper före uppladdningen och dess ID sparas som standard för den här enheten."
         }
       }
     }

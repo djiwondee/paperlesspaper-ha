@@ -6,6 +6,7 @@ upload_image:
       name: Device
       description: The paperlesspaper ePaper display to upload to.
       required: true
+      example: MyEPaperDisplayId
       selector:
         device:
           integration: paperlesspaper
@@ -13,6 +14,7 @@ upload_image:
       name: Image
       description: Select an image from your media library.
       required: true
+      example: media-source://media_source/local/my_image.png
       selector:
         media:
           accept:
@@ -23,3 +25,14 @@ upload_image:
             - image/svg+xml
             - image/heic
             - image/heif
+    reuse_existing_paper:
+      name: Reuse existing paper
+      description: >
+        If enabled (default), the existing paper ID is reused for uploading.
+        If disabled, a new paper is created before uploading and its ID is
+        saved as the new default for this device.
+      required: false
+      default: true
+      example: true
+      selector:
+        boolean:

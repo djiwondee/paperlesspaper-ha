@@ -67,6 +67,10 @@
         "media_content_id": {
           "name": "Pilt",
           "description": "Vali pilt oma meediaraamatukogust või sisesta otse https:// URL."
+        },
+        "reuse_existing_paper": {
+          "name": "Kasuta olemasolevat paberit",
+          "description": "Kui lubatud (vaikimisi), kasutatakse olemasolevat paberi ID-d uuesti. Kui keelatud, luuakse enne üleslaadimist uus paber ja selle ID salvestatakse selle seadme vaikeväärtusena."
         }
       }
     }

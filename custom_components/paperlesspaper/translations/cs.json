@@ -67,6 +67,10 @@
         "media_content_id": {
           "name": "Obrázek",
           "description": "Vyberte obrázek z mediální knihovny nebo zadejte přímou https:// URL."
+        },
+        "reuse_existing_paper": {
+          "name": "Znovu použít existující papír",
+          "description": "Pokud je povoleno (výchozí), existující ID papíru se znovu použije. Pokud je zakázáno, bude před nahráním vytvořen nový papír a jeho ID uloženo jako výchozí pro toto zařízení."
         }
       }
     }
