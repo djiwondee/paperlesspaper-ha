@@ -33,8 +33,9 @@ Before installing this integration you need:
 
 1. A [paperlesspaper](https://paperlesspaper.de) account with at least one registered device
 2. An API key — generate one at [paperlesspaper.de/posts/api](https://paperlesspaper.de/posts/api)
-3. Home Assistant 2026.3 or newer
-4. HACS installed in your Home Assistant instance
+3. **A name set for your group (organization) in the paperlesspaper app.** New groups may be created without a name — make sure to assign one before setting up the integration, otherwise the configuration flow will fail.
+4. Home Assistant 2026.3 or newer
+5. HACS installed in your Home Assistant instance
 
 > **Important:** This integration requires your device to be set up in the paperlesspaper app first. New devices cannot be registered through Home Assistant.
 
