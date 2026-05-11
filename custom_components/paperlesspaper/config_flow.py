@@ -29,6 +29,18 @@
 #                    The config entry always covers all devices in the
 #                    organization. Removed selected_devices from data_schema
 #                    and all related SelectSelector imports.
+# 2026-05-11  0.3.0  Options flow: added conditional reset checkbox for the
+#                    upload_random_image rotation history. The checkbox is
+#                    only shown when history data exists in config_entry.data
+#                    (i.e. the action has been used at least once). When
+#                    checked, all per-directory 'seen' lists are cleared for
+#                    every device of this integration entry; currently_showing
+#                    values are preserved for cross-device duplicate avoidance.
+#                    The reset key is NOT persisted in entry.options — it
+#                    triggers the action and is then discarded. The checkbox
+#                    description explicitly clarifies that only the HA media
+#                    library rotation memory is reset, not anything in the
+#                    paperlesspaper app or cloud.
 # =============================================================================
 
 """Config flow for paperlesspaper integration."""
@@ -46,11 +58,16 @@ from .const import (
     CONF_API_KEY,
     CONF_ORGANIZATION_ID,
     CONF_POLLING_INTERVAL,
+    CONF_RANDOM_UPLOAD_HISTORY,
     DEFAULT_POLLING_INTERVAL,
     DOMAIN,
     MAX_POLLING_INTERVAL,
     MIN_POLLING_INTERVAL,
 )
+
+# Internal field name for the reset checkbox — used only within the Options
+# Flow and never persisted to entry.options.
+_OPT_RESET_RANDOM_HISTORY = "reset_random_history"
 
 
 class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -322,12 +339,26 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
 class PaperlessOptionsFlow(OptionsFlow):
     """Handle options for paperlesspaper.
 
+    Provides two settings:
+    1. Polling interval — how often HA polls the API
+    2. Reset random image history (conditional) — only shown when the
+       upload_random_image action has been used at least once. Clears
+       all per-directory 'seen' lists across every device of this entry
+       so the rotation starts over. Does NOT affect the paperlesspaper
+       app or cloud; only the HA-internal rotation memory is reset.
+
     No __init__ needed — self.config_entry is provided by HA automatically.
     """
 
     async def async_step_init(self, user_input=None) -> ConfigFlowResult:
         """Manage options."""
         errors: dict[str, str] = {}
+
+        # Check whether the upload_random_image action has been used at
+        # least once — only then does a reset checkbox make sense.
+        has_random_history = bool(
+            self.config_entry.data.get(CONF_RANDOM_UPLOAD_HISTORY)
+        )
 
         if user_input is not None:
             interval = user_input.get(CONF_POLLING_INTERVAL)
@@ -336,19 +367,38 @@ class PaperlessOptionsFlow(OptionsFlow):
             elif interval is not None and interval > MAX_POLLING_INTERVAL:
                 errors[CONF_POLLING_INTERVAL] = "polling_interval_too_high"
             else:
+                # Handle the reset checkbox before saving options.
+                # The reset flag must NOT be persisted — pop it and act on it.
+                reset_requested = user_input.pop(_OPT_RESET_RANDOM_HISTORY, False)
+                if reset_requested and has_random_history:
+                    # Import here to avoid a circular import — the coordinator
+                    # lives in a sibling module and is accessed via hass.data.
+                    coordinator = self.hass.data[DOMAIN].get(
+                        self.config_entry.entry_id
+                    )
+                    if coordinator is not None:
+                        coordinator.reset_all_random_history()
+
                 return self.async_create_entry(title="", data=user_input)
 
         current_interval = self.config_entry.options.get(
             CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL
         )
 
+        # Build the schema conditionally: reset checkbox only when relevant.
+        schema_fields: dict = {
+            vol.Required(
+                CONF_POLLING_INTERVAL,
+                default=current_interval,
+            ): int,
+        }
+        if has_random_history:
+            schema_fields[
+                vol.Optional(_OPT_RESET_RANDOM_HISTORY, default=False)
+            ] = bool
+
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({
-                vol.Required(
-                    CONF_POLLING_INTERVAL,
-                    default=current_interval,
-                ): int,
-            }),
+            data_schema=vol.Schema(schema_fields),
             errors=errors,
         )
