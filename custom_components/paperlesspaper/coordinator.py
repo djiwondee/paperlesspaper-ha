@@ -14,10 +14,42 @@
 #                    resulting paper_id as the device default in
 #                    config_entry.data. Called by the upload_image service
 #                    when force_new_paper=True.
+# 2026-05-09  0.3.0  Added random-upload-history helpers:
+#                    - get_random_history(): returns the full history dict
+#                    - update_random_history(): persists the full history dict
+#                    These methods are used by the upload_random_image action
+#                    in __init__.py to track already-shown images per (device,
+#                    directory) and the currently displayed image per device.
+#                    The history lives in config_entry.data alongside paper_ids
+#                    so it survives HA restarts without a separate storage layer.
+# 2026-05-11  0.3.0  Added retry logic to _async_update_data: transient HTTP
+#                    errors (408/429/502/503/504) and connection errors are
+#                    retried up to 2 times with exponential backoff (3s, 8s)
+#                    before raising UpdateFailed. This prevents sensors from
+#                    flipping to "unavailable" during brief server-side load
+#                    spikes — the same root cause that motivated the upload
+#                    retry logic in __init__.py.
+# 2026-05-11  0.3.0  Hardened transient-error handling:
+#                    - Coordinator fetch retries now honour the HTTP Retry-After
+#                      response header when the server provides it. Capped at
+#                      60s (shorter cap than uploads because the next poll
+#                      cycle will retry anyway).
+#                    - Coordinator backoff lengthened slightly from 3s/8s to
+#                      5s/15s for better resilience against transient outages
+#                      documented by the provider (HTTP 503 may take ~5min to
+#                      recover). The coordinator only needs to survive one
+#                      poll cycle, hence the cap stays modest.
+# 2026-05-11  0.3.0  Added reset_all_random_history(): clears the 'seen'
+#                    lists for all devices of this integration entry so the
+#                    upload_random_image cycle restarts from the beginning of
+#                    the pool for every device. Per-device currently_showing
+#                    values are preserved so cross-device duplicate avoidance
+#                    keeps working. Called by the Options Flow reset checkbox.
 # =============================================================================
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 import json
 import logging
@@ -35,10 +67,43 @@ from .const import (
     CONF_ORGANIZATION_ID,
     CONF_PAPER_IDS,
     CONF_POLLING_INTERVAL,
+    CONF_RANDOM_UPLOAD_HISTORY,
     DEFAULT_POLLING_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Transient HTTP statuses that should trigger a retry rather than mark all
+# sensors unavailable. Mirrors the list used in __init__.py for uploads.
+_RETRYABLE_HTTP_STATUSES = frozenset({408, 429, 502, 503, 504})
+
+# Backoff schedule for coordinator fetches. Shorter than the upload schedule
+# because the coordinator should not block too long — sensors would simply
+# refresh on the next poll cycle. Total worst-case wait: 5 + 15 = 20 seconds.
+_FETCH_RETRY_BACKOFF_SECONDS = (5, 15)
+
+# Hard upper bound for any single backoff wait in the coordinator. Lower than
+# the upload cap because the next poll cycle will give us another chance.
+_MAX_BACKOFF_SECONDS = 60
+
+
+def _parse_retry_after(header_value: str | None) -> int | None:
+    """Parse the HTTP Retry-After header value.
+
+    Per RFC 7231 the header is either a non-negative integer (delta-seconds)
+    or an HTTP-date. This coordinator only honours the integer form; HTTP-date
+    values are ignored so the caller falls back to the scheduled backoff.
+    Capped at _MAX_BACKOFF_SECONDS to keep the coordinator responsive.
+    """
+    if not header_value:
+        return None
+    try:
+        value = int(header_value.strip())
+    except (TypeError, ValueError):
+        return None
+    if value < 0:
+        return None
+    return min(value, _MAX_BACKOFF_SECONDS)
 
 
 class PaperlessCoordinator(DataUpdateCoordinator):
@@ -66,6 +131,10 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         """Return auth headers."""
         return {"x-api-key": self.api_key}
 
+    # ------------------------------------------------------------------
+    # Paper ID helpers
+    # ------------------------------------------------------------------
+
     def get_paper_id(self, device_id: str) -> str | None:
         """Return stored paper_id for a device."""
         return self.entry.data.get(CONF_PAPER_IDS, {}).get(device_id)
@@ -79,6 +148,85 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             data={**self.entry.data, CONF_PAPER_IDS: paper_ids},
         )
         _LOGGER.debug("Stored paper_id %s for device %s", paper_id, device_id)
+
+    # ------------------------------------------------------------------
+    # Random upload history helpers
+    # ------------------------------------------------------------------
+
+    def get_random_history(self) -> dict:
+        """Return the full random-upload history dict.
+
+        Structure:
+            {
+              "<pp_device_id>": {
+                "currently_showing": "<uri>",
+                "<directory_uri>": {
+                  "seen": ["<uri>", ...],
+                  "max_images": <int>
+                }
+              }
+            }
+
+        Returns an empty dict when no history has been recorded yet.
+        Always returns a deep-copyable plain dict — callers can safely mutate.
+        """
+        history = self.entry.data.get(CONF_RANDOM_UPLOAD_HISTORY, {})
+        # Return a shallow copy so callers don't accidentally mutate live data
+        return dict(history)
+
+    def update_random_history(self, history: dict) -> None:
+        """Persist the full random-upload history dict to config_entry.data.
+
+        Caller is expected to have read the current history via
+        get_random_history(), modified it, and now writes the full dict back.
+        """
+        self.hass.config_entries.async_update_entry(
+            self.entry,
+            data={**self.entry.data, CONF_RANDOM_UPLOAD_HISTORY: history},
+        )
+        _LOGGER.debug("Updated random upload history")
+
+    def reset_all_random_history(self) -> int:
+        """Clear all 'seen' lists for every device of this integration entry.
+
+        Called by the Options Flow reset checkbox. Covers all devices in the
+        organization so the entire rotation starts fresh on the next
+        upload_random_image call. The per-device 'currently_showing' values
+        are deliberately preserved so the cross-device duplicate avoidance
+        keeps working across the reset.
+
+        Returns the total number of seen entries that were cleared (used for
+        info logging only).
+        """
+        history = self.get_random_history()
+        if not history:
+            _LOGGER.debug("Reset requested but random upload history is empty — nothing to do")
+            return 0
+
+        cleared = 0
+        for device_history in history.values():
+            if not isinstance(device_history, dict):
+                continue
+            for key, value in device_history.items():
+                if key == "currently_showing":
+                    continue  # preserved for cross-device duplicate avoidance
+                if isinstance(value, dict) and "seen" in value:
+                    cleared += len(value.get("seen") or [])
+                    value["seen"] = []
+
+        self.update_random_history(history)
+        _LOGGER.info(
+            "Reset all random upload history for integration entry %s "
+            "— cleared %d seen entr%s across all devices",
+            self.entry.entry_id,
+            cleared,
+            "y" if cleared == 1 else "ies",
+        )
+        return cleared
+
+    # ------------------------------------------------------------------
+    # Paper API helpers
+    # ------------------------------------------------------------------
 
     async def _fetch_papers_for_device(self, device_id: str) -> list[dict]:
         """Fetch all papers for a device."""
@@ -273,33 +421,112 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Ping %s -> error: %s", device_id, err)
             return {"reachable": False}
 
+    async def _fetch_device_list(self) -> list[dict]:
+        """Fetch the list of devices for this organization.
+
+        Retries up to 2 times with exponential backoff on transient HTTP
+        errors (408/429/502/503/504) and connection errors. Honours the
+        Retry-After response header when the server provides it.
+        Raises the underlying aiohttp error on final failure — the caller
+        wraps it into UpdateFailed.
+        """
+        url = f"{API_BASE_URL}/devices/"
+        params = {"organization": self.organization_id}
+
+        max_attempts = 1 + len(_FETCH_RETRY_BACKOFF_SECONDS)
+        last_error: Exception | None = None
+        last_retry_after: int | None = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                async with self._session.get(
+                    url,
+                    headers=self._headers,
+                    params=params,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    if resp.status in _RETRYABLE_HTTP_STATUSES:
+                        last_error = aiohttp.ClientResponseError(
+                            request_info=resp.request_info,
+                            history=resp.history,
+                            status=resp.status,
+                            message=resp.reason or "",
+                            headers=resp.headers,
+                        )
+                        last_retry_after = _parse_retry_after(
+                            resp.headers.get("Retry-After")
+                        )
+                        _LOGGER.warning(
+                            "Device list fetch returned HTTP %s on attempt %d/%d%s "
+                            "— will %s",
+                            resp.status, attempt, max_attempts,
+                            f", server Retry-After={last_retry_after}s"
+                            if last_retry_after is not None else "",
+                            "retry" if attempt < max_attempts else "give up",
+                        )
+                    else:
+                        resp.raise_for_status()
+                        data = await resp.json()
+                        return data.get("results", [])
+            except aiohttp.ClientConnectionError as err:
+                last_error = err
+                last_retry_after = None
+                _LOGGER.warning(
+                    "Device list fetch connection error on attempt %d/%d: %s — will %s",
+                    attempt, max_attempts, err,
+                    "retry" if attempt < max_attempts else "give up",
+                )
+            except aiohttp.ClientResponseError:
+                # Non-retryable HTTP error — propagate immediately
+                raise
+
+            # Wait before next attempt, honouring Retry-After hint if present
+            if attempt < max_attempts:
+                scheduled = _FETCH_RETRY_BACKOFF_SECONDS[attempt - 1]
+                wait = (
+                    last_retry_after
+                    if last_retry_after is not None
+                    else scheduled
+                )
+                _LOGGER.debug(
+                    "Waiting %ds before next device list fetch attempt%s",
+                    wait,
+                    " (server Retry-After)" if last_retry_after is not None else "",
+                )
+                await asyncio.sleep(wait)
+
+        # Exhausted retries — re-raise the last error so the caller can wrap it.
+        if last_error is not None:
+            raise last_error
+        # Defensive: this branch is unreachable, but keeps type-checkers happy.
+        raise aiohttp.ClientError("Device list fetch failed without specific error")
+
     async def _async_update_data(self) -> list[dict]:
-        """Fetch device list, enrich each device with ping data and paper_id."""
+        """Fetch device list, enrich each device with ping data and paper_id.
+
+        Transient errors (502/503/504, connection issues) are handled by
+        _fetch_device_list with backoff. Only persistent failures bubble up
+        as UpdateFailed.
+        """
         try:
-            async with self._session.get(
-                f"{API_BASE_URL}/devices/",
-                headers=self._headers,
-                params={"organization": self.organization_id},
-                timeout=aiohttp.ClientTimeout(total=10),
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-                devices = data.get("results", [])
-                _LOGGER.debug("Fetched %d device(s)", len(devices))
+            devices = await self._fetch_device_list()
+            _LOGGER.debug("Fetched %d device(s)", len(devices))
 
-                for device in devices:
-                    device_id = device["id"]
+            for device in devices:
+                device_id = device["id"]
 
-                    # Ensure valid paper_id
-                    device["paper_id"] = await self._ensure_paper_id(device_id, device)
+                # Ensure valid paper_id
+                device["paper_id"] = await self._ensure_paper_id(device_id, device)
 
-                    # Ping device → enriched status data
-                    ping_data = await self._ping_device(device_id)
-                    device.update(ping_data)
-
-                return devices
+                # Ping device → enriched status data
+                ping_data = await self._ping_device(device_id)
+                device.update(ping_data)
 
         except aiohttp.ClientResponseError as err:
             raise UpdateFailed(f"API error: {err.status}") from err
         except aiohttp.ClientConnectionError as err:
             raise UpdateFailed(f"Connection error: {err}") from err
+        except aiohttp.ClientError as err:
+            raise UpdateFailed(f"Client error: {err}") from err
+        else:
+            return devices

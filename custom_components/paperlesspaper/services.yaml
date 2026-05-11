@@ -17,14 +17,68 @@ upload_image:
       example: media-source://media_source/local/my_image.png
       selector:
         media:
+          # HEIC/HEIF are intentionally NOT listed: the paperlesspaper upload
+          # endpoint does not handle them (returns HTTP 502).
           accept:
             - image/jpeg
             - image/png
             - image/gif
             - image/webp
             - image/svg+xml
-            - image/heic
-            - image/heif
+    reuse_existing_paper:
+      name: Reuse existing paper
+      description: >
+        If enabled (default), the existing paper ID is reused for uploading.
+        If disabled, a new paper is created before uploading and its ID is
+        saved as the new default for this device.
+      required: false
+      default: true
+      example: true
+      selector:
+        boolean:
+
+upload_random_image:
+  name: Upload random image
+  description: >
+    Pick a random image from a media-source directory and upload it to a
+    paperlesspaper ePaper display. Tracks already-shown images per device
+    and per directory so each picture is shown once before the cycle
+    repeats. Avoids showing the same image simultaneously on multiple
+    devices.
+  fields:
+    device_id:
+      name: Device
+      description: The paperlesspaper ePaper display to upload to.
+      required: true
+      example: MyEPaperDisplayId
+      selector:
+        device:
+          integration: paperlesspaper
+    media_directory:
+      name: Media directory
+      description: >
+        media-source:// URI of the directory to pick images from.
+        Examples:
+          media-source://media_source/local/photos
+          media-source://media_source/local/nas/family
+      required: true
+      example: media-source://media_source/local/photos
+      selector:
+        text:
+    max_images:
+      name: Max images
+      description: >
+        Maximum number of images from the directory to include in the
+        rotation pool. 0 (default) means use all images. Useful when the
+        directory contains many images but you only want, e.g., 24 of them.
+      required: false
+      default: 0
+      example: 24
+      selector:
+        number:
+          min: 0
+          max: 10000
+          mode: box
     reuse_existing_paper:
       name: Reuse existing paper
       description: >

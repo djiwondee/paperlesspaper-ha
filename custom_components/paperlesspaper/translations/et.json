@@ -43,10 +43,12 @@
       "init": {
         "title": "paperlesspaper suvandid",
         "data": {
-          "polling_interval": "Küsitlusintervall (sekundid)"
+          "polling_interval": "Küsitlusintervall (sekundid)",
+          "reset_random_history": "Juhusliku pildi ajalugu lähtestada"
         },
         "data_description": {
-          "polling_interval": "Kui tihti HA API-d küsitleb (60–3600 sekundit)."
+          "polling_interval": "Kui tihti HA API-d küsitleb (60–3600 sekundit).",
+          "reset_random_history": "Kui lubatud, kustutatakse toimingu 'Laadi juhuslik pilt üles' rotatsioonimälu selle grupi kõigi seadmete jaoks. See mõjutab ainult Home Assistanti meediaraamatukogust juba näidatud piltide nimekirja — paperlesspaper rakenduses ega paperlesspaper pilves ei muudeta midagi. Kasulik pärast uute piltide lisamist kausta, et tsükkel kohe uuesti alustaks."
         }
       }
     },
@@ -67,6 +69,28 @@
         "media_content_id": {
           "name": "Pilt",
           "description": "Vali pilt oma meediaraamatukogust või sisesta otse https:// URL."
+        },
+        "reuse_existing_paper": {
+          "name": "Kasuta olemasolevat paberit",
+          "description": "Kui lubatud (vaikimisi), kasutatakse olemasolevat paberi ID-d uuesti. Kui keelatud, luuakse enne üleslaadimist uus paber ja selle ID salvestatakse selle seadme vaikeväärtusena."
+        }
+      }
+    },
+    "upload_random_image": {
+      "name": "Laadi juhuslik pilt üles",
+      "description": "Valib meediakaustast juhusliku pildi ja laadib selle paperlesspaper ePaper-ekraanile. Jälgib näidatud pilte, et vältida kordamist kuni tsükli lõpuni.",
+      "fields": {
+        "device_id": {
+          "name": "Seade",
+          "description": "paperlesspaper ePaper-ekraan, kuhu üles laadida."
+        },
+        "media_directory": {
+          "name": "Meediakaust",
+          "description": "Meediakaust, millest juhuslik pilt valida, antud media-source:// URI-na (nt media-source://media_source/local/pildid)."
+        },
+        "max_images": {
+          "name": "Pildi maksimaalne arv",
+          "description": "Kausta piltide maksimaalne arv rotatsioonis. 0 tähendab kõikide piltide kasutamist (vaikimisi)."
         },
         "reuse_existing_paper": {
           "name": "Kasuta olemasolevat paberit",

@@ -43,10 +43,12 @@
       "init": {
         "title": "Možnosti paperlesspaper",
         "data": {
-          "polling_interval": "Interval dotazování (sekundy)"
+          "polling_interval": "Interval dotazování (sekundy)",
+          "reset_random_history": "Resetovat historii náhodných obrázků"
         },
         "data_description": {
-          "polling_interval": "Jak často HA dotazuje API (60–3600 sekund)."
+          "polling_interval": "Jak často HA dotazuje API (60–3600 sekund).",
+          "reset_random_history": "Pokud je povoleno, paměť rotace akce 'Nahrát náhodný obrázek' bude vymazána pro všechna zařízení v této skupině. Týká se pouze seznamu obrázků, které již byly zobrazeny z mediální knihovny Home Assistantu — v aplikaci paperlesspaper ani v cloudu paperlesspaper se nic nezmění. Užitečné po přidání nových obrázků do složky, aby cyklus okamžitě začal znovu."
         }
       }
     },
@@ -67,6 +69,28 @@
         "media_content_id": {
           "name": "Obrázek",
           "description": "Vyberte obrázek z mediální knihovny nebo zadejte přímou https:// URL."
+        },
+        "reuse_existing_paper": {
+          "name": "Znovu použít existující papír",
+          "description": "Pokud je povoleno (výchozí), existující ID papíru se znovu použije. Pokud je zakázáno, bude před nahráním vytvořen nový papír a jeho ID uloženo jako výchozí pro toto zařízení."
+        }
+      }
+    },
+    "upload_random_image": {
+      "name": "Nahrát náhodný obrázek",
+      "description": "Vybere náhodný obrázek ze složky mediální knihovny a nahraje jej na ePaper displej paperlesspaper. Sleduje již zobrazené obrázky, aby se zabránilo opakování až do dokončení cyklu.",
+      "fields": {
+        "device_id": {
+          "name": "Zařízení",
+          "description": "ePaper displej paperlesspaper, na který se má nahrát."
+        },
+        "media_directory": {
+          "name": "Složka médií",
+          "description": "Složka mediální knihovny, ze které se vybere náhodný obrázek, zadaná jako media-source:// URI (např. media-source://media_source/local/fotky)."
+        },
+        "max_images": {
+          "name": "Maximální počet obrázků",
+          "description": "Maximální počet obrázků ze složky zahrnutých do rotace. 0 znamená použít všechny obrázky (výchozí)."
         },
         "reuse_existing_paper": {
           "name": "Znovu použít existující papír",

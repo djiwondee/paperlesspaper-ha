@@ -43,10 +43,12 @@
       "init": {
         "title": "paperlesspaper-alternativ",
         "data": {
-          "polling_interval": "Uppdateringsintervall (sekunder)"
+          "polling_interval": "Uppdateringsintervall (sekunder)",
+          "reset_random_history": "Återställ slumpmässig bildhistorik"
         },
         "data_description": {
-          "polling_interval": "Hur ofta HA frågar API:et (60–3600 sekunder)."
+          "polling_interval": "Hur ofta HA frågar API:et (60–3600 sekunder).",
+          "reset_random_history": "När aktiverat rensas rotationsminnet för åtgärden 'Ladda upp slumpmässig bild' för alla enheter i den här gruppen. Detta påverkar endast listan över redan visade bilder från Home Assistants mediebibliotek — ingenting ändras i paperlesspaper-appen eller i paperlesspaper-molnet. Användbart efter att nya bilder lagts till i en mapp så att cykeln startar om omedelbart."
         }
       }
     },
@@ -67,6 +69,28 @@
         "media_content_id": {
           "name": "Bild",
           "description": "Välj en bild från ditt mediebibliotek eller ange en direkt https://-URL."
+        },
+        "reuse_existing_paper": {
+          "name": "Återanvänd befintligt paper",
+          "description": "Om aktiverat (standard) återanvänds det befintliga paper-ID:t. Om inaktiverat skapas ett nytt paper före uppladdningen och dess ID sparas som standard för den här enheten."
+        }
+      }
+    },
+    "upload_random_image": {
+      "name": "Ladda upp slumpmässig bild",
+      "description": "Väljer en slumpmässig bild från en mediebiblioteksmapp och laddar upp den till en paperlesspaper ePaper-display. Spårar visade bilder för att undvika upprepningar tills cykeln är klar.",
+      "fields": {
+        "device_id": {
+          "name": "Enhet",
+          "description": "Den paperlesspaper ePaper-display som bilden ska laddas upp till."
+        },
+        "media_directory": {
+          "name": "Mediemapp",
+          "description": "Mediebiblioteksmappen att välja en slumpmässig bild från, angiven som en media-source://-URI (t.ex. media-source://media_source/local/foton)."
+        },
+        "max_images": {
+          "name": "Max antal bilder",
+          "description": "Maximalt antal bilder från mappen att inkludera i rotationen. 0 betyder att alla bilder används (standard)."
         },
         "reuse_existing_paper": {
           "name": "Återanvänd befintligt paper",

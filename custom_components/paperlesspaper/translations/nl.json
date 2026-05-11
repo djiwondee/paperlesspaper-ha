@@ -43,10 +43,12 @@
       "init": {
         "title": "paperlesspaper-opties",
         "data": {
-          "polling_interval": "Polling-interval (seconden)"
+          "polling_interval": "Polling-interval (seconden)",
+          "reset_random_history": "Willekeurige afbeeldingsgeschiedenis resetten"
         },
         "data_description": {
-          "polling_interval": "Hoe vaak HA de API bevraagt (60–3600 seconden)."
+          "polling_interval": "Hoe vaak HA de API bevraagt (60–3600 seconden).",
+          "reset_random_history": "Als ingeschakeld wordt het rotatiegeheugen van de actie 'Willekeurige afbeelding uploaden' gewist voor alle apparaten in deze groep. Dit heeft alleen invloed op de lijst met reeds getoonde afbeeldingen uit de Home Assistant-mediabibliotheek — er wordt niets gewijzigd in de paperlesspaper-app of in de paperlesspaper-cloud. Handig na het toevoegen van nieuwe afbeeldingen aan een map zodat de cyclus onmiddellijk opnieuw begint."
         }
       }
     },
@@ -67,6 +69,28 @@
         "media_content_id": {
           "name": "Afbeelding",
           "description": "Selecteer een afbeelding uit je mediabibliotheek of geef een directe https://-URL op."
+        },
+        "reuse_existing_paper": {
+          "name": "Bestaand paper hergebruiken",
+          "description": "Als ingeschakeld (standaard) wordt het bestaande paper-ID hergebruikt. Als uitgeschakeld wordt er vóór het uploaden een nieuw paper aangemaakt en het ID opgeslagen als standaard voor dit apparaat."
+        }
+      }
+    },
+    "upload_random_image": {
+      "name": "Willekeurige afbeelding uploaden",
+      "description": "Kiest een willekeurige afbeelding uit een mediabibliotheekmap en uploadt deze naar een paperlesspaper ePaper-scherm. Houdt getoonde afbeeldingen bij om herhalingen te vermijden totdat de cyclus voltooid is.",
+      "fields": {
+        "device_id": {
+          "name": "Apparaat",
+          "description": "Het paperlesspaper ePaper-scherm waarnaar geüpload wordt."
+        },
+        "media_directory": {
+          "name": "Mediamap",
+          "description": "De mediabibliotheekmap waaruit een willekeurige afbeelding wordt gekozen, opgegeven als media-source://-URI (bijv. media-source://media_source/local/fotos)."
+        },
+        "max_images": {
+          "name": "Max aantal afbeeldingen",
+          "description": "Maximumaantal afbeeldingen uit de map dat in de rotatie wordt opgenomen. 0 betekent alle afbeeldingen gebruiken (standaard)."
         },
         "reuse_existing_paper": {
           "name": "Bestaand paper hergebruiken",

@@ -7,6 +7,13 @@
 #                    listener handles devices added later without a restart.
 #                    Removed devices are NOT auto-removed — their entities
 #                    remain in HA and become unavailable.
+# 2026-05-11  0.3.0  Removed PaperlessResetRandomHistoryButton: the reset
+#                    functionality was moved to the Options Flow
+#                    (⚙️ Configure) where it makes more sense as a global
+#                    operation affecting all devices of this integration
+#                    entry at once. A per-device button implied device-level
+#                    scope which was misleading given the shared history
+#                    structure.
 # =============================================================================
 
 from __future__ import annotations
@@ -97,8 +104,13 @@ def _device_info(device: dict) -> DeviceInfo:
     )
 
 
+# =============================================================================
+# Base class for API-call buttons (reboot, reset)
+# =============================================================================
+
+
 class PaperlessBaseButton(CoordinatorEntity, ButtonEntity):
-    """Base button for paperlesspaper devices."""
+    """Base button for paperlesspaper devices that performs an API call."""
 
     _endpoint: str
     _action_name: str

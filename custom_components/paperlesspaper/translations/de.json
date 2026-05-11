@@ -4,12 +4,16 @@
       "user": {
         "title": "paperlesspaper einrichten",
         "description": "Gib deinen API Key aus der paperlesspaper App ein.",
-        "data": { "api_key": "API Key" }
+        "data": {
+          "api_key": "API Key"
+        }
       },
       "organization": {
         "title": "Gruppe auswählen",
         "description": "Wähle die Gruppe aus, die deine ePaper Geräte enthält. Jede Gruppe wird als eigener Integrationseintrag in Home Assistant angelegt.",
-        "data": { "organization_id": "Gruppe" }
+        "data": {
+          "organization_id": "Gruppe"
+        }
       },
       "devices": {
         "title": "Geräte gefunden",
@@ -18,7 +22,9 @@
       "reconfigure": {
         "title": "paperlesspaper neu konfigurieren",
         "description": "Aktualisiere den API Key für diesen Integrationseintrag. Du kannst anschließend auch eine andere Gruppe auswählen.",
-        "data": { "api_key": "API Key" }
+        "data": {
+          "api_key": "API Key"
+        }
       }
     },
     "error": {
@@ -36,8 +42,14 @@
     "step": {
       "init": {
         "title": "paperlesspaper Optionen",
-        "data": { "polling_interval": "Abfrageintervall (Sekunden)" },
-        "data_description": { "polling_interval": "Wie oft HA die API abfragt (60–3600 Sekunden)." }
+        "data": {
+          "polling_interval": "Abfrageintervall (Sekunden)",
+          "reset_random_history": "Zufalls-Rotation zurücksetzen"
+        },
+        "data_description": {
+          "polling_interval": "Wie oft HA die API abfragt (60–3600 Sekunden).",
+          "reset_random_history": "Wenn aktiviert, wird der Bildverlauf der Aktion 'Zufallsbild hochladen' für alle Geräte dieser Gruppe gelöscht. Dies betrifft ausschließlich die interne Liste der bereits angezeigten Bilder aus der Home Assistant-Medienbibliothek — es werden keine Daten in der paperlesspaper App oder in der paperlesspaper Cloud verändert. Nützlich, wenn neue Bilder zu einem Ordner hinzugefügt wurden und der Zyklus sofort von vorne beginnen soll."
+        }
       }
     },
     "error": {
@@ -63,33 +75,78 @@
           "description": "Wenn aktiviert (Standard), wird die vorhandene Paper-ID wiederverwendet. Wenn deaktiviert, wird vor dem Hochladen ein neues Paper erstellt und dessen ID als neuer Standard für das ausgewählte Gerät gespeichert."
         }
       }
+    },
+    "upload_random_image": {
+      "name": "Zufallsbild hochladen",
+      "description": "Wählt ein zufälliges Bild aus einem Medienordner und lädt es auf ein paperlesspaper ePaper Display hoch. Bereits gezeigte Bilder werden gemerkt, um Wiederholungen bis zum Ende des Durchlaufs zu vermeiden.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Das paperlesspaper ePaper Display, auf das hochgeladen werden soll."
+        },
+        "media_directory": {
+          "name": "Medienordner",
+          "description": "Der Medienbibliotheksordner, aus dem ein Zufallsbild ausgewählt wird, angegeben als media-source:// URI (z.B. media-source://media_source/local/fotos)."
+        },
+        "max_images": {
+          "name": "Maximale Anzahl Bilder",
+          "description": "Maximale Anzahl an Bildern aus dem Ordner, die in die Rotation aufgenommen werden. 0 bedeutet alle Bilder verwenden (Standard)."
+        },
+        "reuse_existing_paper": {
+          "name": "Vorhandenes Paper wiederverwenden",
+          "description": "Wenn aktiviert (Standard), wird die vorhandene Paper-ID wiederverwendet. Wenn deaktiviert, wird vor dem Hochladen ein neues Paper erstellt und dessen ID als neuer Standard für das ausgewählte Gerät gespeichert."
+        }
+      }
     }
   },
   "entity": {
     "sensor": {
-      "bat_level": { "name": "Batteriepegel" },
-      "bat_voltage": { "name": "Batteriespannung" },
-      "next_device_sync": { "name": "Aktualisierungsintervall" },
-      "sleep_time": { "name": "Ruheintervall" },
-      "sleep_time_predict": { "name": "Vorhergesagtes Ruheintervall" }
+      "bat_level": {
+        "name": "Batteriepegel"
+      },
+      "bat_voltage": {
+        "name": "Batteriespannung"
+      },
+      "next_device_sync": {
+        "name": "Aktualisierungsintervall"
+      },
+      "sleep_time": {
+        "name": "Ruheintervall"
+      },
+      "sleep_time_predict": {
+        "name": "Vorhergesagtes Ruheintervall"
+      }
     },
     "binary_sensor": {
       "reachable": {
         "name": "Gerät erreichbar",
-        "state": { "on": "Verbunden", "off": "Nicht erreichbar" }
+        "state": {
+          "on": "Verbunden",
+          "off": "Nicht erreichbar"
+        }
       },
       "picture_synced": {
         "name": "Bild synchronisiert",
-        "state": { "on": "Synchronisiert", "off": "Ausstehend" }
+        "state": {
+          "on": "Synchronisiert",
+          "off": "Ausstehend"
+        }
       },
       "update_pending": {
         "name": "Update ausstehend",
-        "state": { "on": "Ausstehend", "off": "Aktuell" }
+        "state": {
+          "on": "Ausstehend",
+          "off": "Aktuell"
+        }
       }
     },
     "button": {
-      "reboot": { "name": "Gerät neu starten" },
-      "reset_sensors": { "name": "Gerätesensoren zurücksetzen" }
+      "reboot": {
+        "name": "Gerät neu starten"
+      },
+      "reset_sensors": {
+        "name": "Gerätesensoren zurücksetzen"
+      }
     }
   }
 }
