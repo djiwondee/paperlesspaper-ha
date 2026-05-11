@@ -48,15 +48,18 @@ Before installing this integration you need:
 1. Open HACS in Home Assistant
 2. Go to **Integrations**
 3. Click the three-dot menu → **Custom repositories**
-4. Add `https://github.com/paperlesspaper/paperlesspaper-ha` as an **Integration**
+4. Add `https://github.com/djiwondee/paperlesspaper-ha` as an **Integration**
 5. Search for **paperlesspaper** and install it
 6. Restart Home Assistant
 
 ### Manual
 
-1. Download the latest release
-2. Copy the `custom_components/paperlesspaper` folder to your HA `config/custom_components/` directory
-3. Restart Home Assistant
+1. Download the latest release from the [Releases page](https://github.com/djiwondee/paperlesspaper-ha/releases)
+2. Extract the archive
+3. Copy the `custom_components/paperlesspaper` folder into your Home Assistant `config/custom_components/` directory (create the `custom_components` folder if it does not exist)
+4. Restart Home Assistant
+5. Go to **Settings → Devices & Services → Add Integration** and search for **paperlesspaper** and install it
+6. Restart Home Assistant 
 
 ---
 
