@@ -41,14 +41,26 @@
 #                    description explicitly clarifies that only the HA media
 #                    library rotation memory is reset, not anything in the
 #                    paperlesspaper app or cloud.
+# 2026-05-12  0.3.1  Fix KeyError when organization has no name set in the
+#                    paperlesspaper API (name is optional). Added
+#                    _resolve_org_name() helper that falls back to a random
+#                    HA-compatible display name from _ORG_NAME_FALLBACKS and
+#                    writes it back into the org dict for flow-wide consistency.
+#                    All three org["name"] accesses (org_options, _create_entry,
+#                    _async_update_entry) now route through this helper.
 # =============================================================================
 
 """Config flow for paperlesspaper integration."""
 from __future__ import annotations
 
+# stdlib
+import random
+
+# third party
 import aiohttp
 import voluptuous as vol
 
+# HA / local
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -69,6 +81,38 @@ from .const import (
 # Flow and never persisted to entry.options.
 _OPT_RESET_RANDOM_HISTORY = "reset_random_history"
 
+# ---------------------------------------------------------------------------
+# Organization name fallback
+# Friendly, HA-compatible names used when an org has no name assigned.
+# All names are CamelCase without spaces: safe for entity IDs, dashboard
+# titles, and automation labels.
+# ---------------------------------------------------------------------------
+_ORG_NAME_FALLBACKS = [
+    "Frame Hub",
+    "Smart Frames",
+    "Home Frames",
+    "Frame Cloud",
+    "Living Frames",
+    "Picture Nodes",
+    "Wall Frames",
+    "Frame Group",
+    "Gallery Hub",
+    "Frame Fleet"
+]
+
+def _resolve_org_name(org: dict) -> str:
+    """Return the organization's name, or a random fallback if unset.
+
+    The API does not require a name on an organization object. When
+    'name' is missing or empty, a random HA-compatible name is picked
+    from _ORG_NAME_FALLBACKS and written back into the org dict so
+    every subsequent read within the same flow sees the same value.
+    """
+    name = org.get("name") or ""
+    if not name.strip():
+        name = random.choice(_ORG_NAME_FALLBACKS)  # noqa: S311 — not security-sensitive
+        org["name"] = name  # write back for consistency within the flow
+    return name
 
 class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for paperlesspaper.
@@ -219,7 +263,9 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_ORGANIZATION_ID, ""
             )
 
-        org_options = {org["id"]: org["name"] for org in self._organizations}
+        # _resolve_org_name ensures a fallback is used when 'name' is not set
+        # in the API response (name is optional in the paperlesspaper API).
+        org_options = {org["id"]: _resolve_org_name(org) for org in self._organizations}
 
         return self.async_show_form(
             step_id="organization",
@@ -300,7 +346,7 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
 
         return self.async_create_entry(
-            title=org["name"],
+            title=_resolve_org_name(org),
             data={
                 CONF_API_KEY: self._api_key,
                 CONF_ORGANIZATION_ID: org["id"],
@@ -317,7 +363,7 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
         reconfigure_entry = self._get_reconfigure_entry()
         return self.async_update_reload_and_abort(
             reconfigure_entry,
-            title=org["name"],
+            title=_resolve_org_name(org),
             data={
                 **reconfigure_entry.data,
                 CONF_API_KEY: self._api_key,
