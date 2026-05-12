@@ -357,7 +357,30 @@ The same information is available as an HA event that any automation can listen 
 | `skipped_upload` | bool | API skip flag (`success`/`skipped` only) |
 | `error` | string | Error message (`failed` only) |
 
-### Example: notify on failure
+### Example: Event payload of a skipped upload because of similarity 
+
+```
+event_type: paperlesspaper_image_uploaded
+data:
+  pp_device_id: 69e4f75b2a1fa2b011c6b01c
+  paper_id: 6a01b88c6649def86ecf4a94
+  status: skipped
+  image_uri: media-source://media_source/local/frame4.jpg
+  action: upload_image
+  attempt: 1
+  device_id: 7a21f0b3badf89ef3bf34103343468d1
+  similarity_percentage: 100
+  skipped_upload: true
+origin: LOCAL
+time_fired: "2026-05-12T16:54:53.440490+00:00"
+context:
+  id: 01KREHSS801JSB1CV35KD46V8X
+  parent_id: null
+  user_id: null
+```
+
+
+### Example: Notify on failure
 
 ```yaml
 automation:
