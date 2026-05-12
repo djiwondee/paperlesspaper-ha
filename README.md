@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -36,7 +36,7 @@ Before installing this integration you need:
 
 1. A [paperlesspaper](https://paperlesspaper.de) account with at least one registered device
 2. An API key — generate one at [paperlesspaper.de/posts/api](https://paperlesspaper.de/posts/api)
-3. **A name set for your group (organization) in the paperlesspaper app.** New groups may be created without a name — make sure to assign one before setting up the integration, otherwise the configuration flow will fail.
+3. *(Optional)* A name for your group (organization) in the paperlesspaper app. New groups may be created without a name — if none is set, the integration will assign a placeholder name automatically (e.g. *Frame Hub*, *Gallery Hub*). You can rename the integration entry in Home Assistant afterwards at any time.
 4. Home Assistant 2026.3 or newer
 5. HACS installed in your Home Assistant instance
 
