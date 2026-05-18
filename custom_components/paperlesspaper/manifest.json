@@ -4,6 +4,7 @@
   "codeowners": ["@djiwondee"],
   "config_flow": true,
   "documentation": "https://github.com/djiwondee/paperlesspaper-ha",
+  "issue_tracker": "https://github.com/djiwondee/paperlesspaper-ha/issues",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "requirements": ["aiohttp>=3.9.0", "aiofiles>=23.0.0"],

@@ -14,6 +14,10 @@
 #   pull_request      — every PR
 #   schedule          — daily at midnight UTC (catches upstream changes)
 #   workflow_dispatch — manual run from the Actions tab
+#
+# CHANGE HISTORY
+# 2026-05-18  1.0.1  Initial CI setup.
+#                    Pinned actions/checkout to v4.2.2 (Node.js 24 compatible).
 # =============================================================================
 
 name: Validate
@@ -28,6 +32,7 @@ on:
 permissions: {}
 
 jobs:
+
   # ---------------------------------------------------------------------------
   # Job 1: HACS repository validation
   # Uses the official hacs/action — runs the same validation HACS itself uses.
@@ -52,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Hassfest validation
         uses: "home-assistant/actions/hassfest@master"
