@@ -1,0 +1,45 @@
+# =============================================================================
+# lint.yml
+# -----------------------------------------------------------------------------
+# Runs Ruff linter on every push and PR to enforce code style consistency.
+#
+# Checks the full custom_components/paperlesspaper/ directory.
+# Ruff configuration is read from pyproject.toml or ruff.toml if present;
+# otherwise Ruff defaults apply.
+#
+# Triggers:
+#   push              — every branch push
+#   pull_request      — every PR
+#   workflow_dispatch — manual run from the Actions tab
+# =============================================================================
+
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Ruff: fast Python linter — covers style, imports, and common errors.
+  # ---------------------------------------------------------------------------
+  ruff:
+    name: Ruff Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff
+        run: ruff check custom_components/paperlesspaper/

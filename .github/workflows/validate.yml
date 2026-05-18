@@ -1,0 +1,58 @@
+# =============================================================================
+# validate.yml
+# -----------------------------------------------------------------------------
+# Runs HACS validation and Home Assistant hassfest on every push and PR.
+# Required for HACS Default Store submission.
+#
+# Jobs:
+#   validate-hacs     — same checks HACS itself uses (hacs/action)
+#   validate-hassfest — validates manifest.json, translations, services
+#                       against HA core (home-assistant/actions/hassfest)
+#
+# Triggers:
+#   push              — every branch push
+#   pull_request      — every PR
+#   schedule          — daily at midnight UTC (catches upstream changes)
+#   workflow_dispatch — manual run from the Actions tab
+# =============================================================================
+
+name: Validate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: HACS repository validation
+  # Uses the official hacs/action — runs the same validation HACS itself uses.
+  # Must pass without errors or ignores for HACS Default Store submission.
+  # ---------------------------------------------------------------------------
+  validate-hacs:
+    name: HACS Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: HACS validation
+        uses: "hacs/action@main"
+        with:
+          category: "integration"
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Home Assistant hassfest
+  # Validates manifest.json, strings.json, translations, and service schemas
+  # against the current Home Assistant core requirements.
+  # ---------------------------------------------------------------------------
+  validate-hassfest:
+    name: Hassfest Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Hassfest validation
+        uses: "home-assistant/actions/hassfest@master"
