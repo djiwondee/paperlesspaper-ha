@@ -1,0 +1,87 @@
+name: Bug Report
+description: Something is not working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a bug report, please check the [existing issues](https://github.com/djiwondee/paperlesspaper-ha/issues)
+        and make sure you are running the **latest version** of the integration.
+
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      description: Found in Settings → Devices & Services → paperlesspaper
+      placeholder: "e.g. 1.0.1"
+    validations:
+      required: true
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "e.g. 2026.3.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Setup / Config flow
+        - upload_image action
+        - upload_random_image action
+        - Sensors / Binary sensors
+        - Reboot / Reset button
+        - Device discovery
+        - Translations / UI
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the problem. What did you expect, what actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Run action ...
+        3. See error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Enable debug logging for the integration and paste relevant lines here.
+        Add this to your `configuration.yaml`:
+        ```yaml
+        logger:
+          logs:
+            custom_components.paperlesspaper: debug
+        ```
+      render: text
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I am running the latest version of the integration
+          required: true
+        - label: I have checked existing issues and this is not a duplicate
+          required: true
+        - label: The device works correctly in the paperlesspaper app
+          required: true
