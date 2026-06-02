@@ -9,7 +9,7 @@
 
 Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directly from Home Assistant — including automations, scripts, and the full HA media library.
 
-<img width="976" height="393" alt="Overview paperlesspaper Integration" src="https://github.com/user-attachments/assets/e22850b8-ae5b-47ea-9919-676d1d46bebe" />
+<img width="919" height="386" alt="image" src="https://github.com/user-attachments/assets/c5a34680-073d-4ee0-8f2b-51d3647d6df8" />
 
 ---
 
@@ -29,7 +29,7 @@ Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directl
 - **Force new paper** — Optionally create a fresh paper slot before uploading
 - **Automation-ready** — Trigger image updates from time schedules, sensors, or any HA event
 
-<img width="1007" height="895" alt="Device overview at a glance" src="https://github.com/user-attachments/assets/195fbcd3-4483-4e6b-9606-b040edd676b4" />
+<img width="944" height="990" alt="image" src="https://github.com/user-attachments/assets/b066fc86-68ce-4786-8fb0-19e239cf05eb" />
 
 ---
 
@@ -688,8 +688,7 @@ Each upload attempt outcome is reported via the `paperlesspaper_image_uploaded` 
 ## Known limitations
 
 - The paperlesspaper API is v1 and some endpoints are still being finalized
-- The `GET /devices/events` endpoint currently returns HTTP 400 and is not used by this integration
-- Deleting papers is not supported via the API — use the paperlesspaper app to manage papers
+- Deleting papers is not supported via the API — use the paperlesspaper mobile app or web app to manage paper library
 - Battery level is reported as a raw millivolt value from the device hardware — accuracy may vary
 - Activity timeline entries for upload events are rendered in English regardless of the Home Assistant UI language
 - Outages of the paperlesspaper upload service longer than the retry budget (~50 seconds for uploads) will fail the current action; the next scheduled automation run will retry
