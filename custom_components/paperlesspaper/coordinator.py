@@ -462,10 +462,13 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                     return {"reachable": False}
 
                 data = await resp.json()
-                ping = data.get("ping", {})
-                device = data.get("device", {})
-                iot = device.get("iotDevice", {})
-                status = device.get("deviceStatus", {})
+                ping = data.get("ping") or {}
+                device = data.get("device") or {}
+                # Use `or {}` instead of `.get(key, {})` — the latter only
+                # applies the default when the key is absent, but the API
+                # may return explicit null values which also need the fallback.
+                iot = device.get("iotDevice") or {}
+                status = device.get("deviceStatus") or {}
 
                 next_sync_ms = status.get("nextDeviceSync")
 
