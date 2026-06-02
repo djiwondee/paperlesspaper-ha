@@ -79,6 +79,12 @@
 #                    out at the pool stage spares the user from inevitable
 #                    upload failures. The MIME-type whitelist in services.yaml
 #                    (used by the upload_image Media Picker) was also trimmed.
+# 2026-06-01  1.0.2  Fixed race condition in upload_random_image: wrap steps
+#                    3–10 in coordinator.random_upload_lock so that concurrent
+#                    calls (two automations firing simultaneously) cannot both
+#                    read a stale history and pick the same image. Steps 1–2
+#                    (directory listing) remain outside the lock — they are
+#                    pure I/O with no history dependency.
 # =============================================================================
 
 from __future__ import annotations
@@ -491,97 +497,102 @@ async def _async_handle_upload_random_image(
 
     pool_set = set(pool)
 
-    # ---------- 3. Read history & validate seen --------------------------
-    history = coordinator.get_random_history()
-    device_history = dict(history.get(pp_device_id, {}))
+    # ---------- 3–10: Serialised — one device at a time per org ----------
+    # The lock ensures that when two automations fire simultaneously, the
+    # second call waits until the first has persisted its currently_showing
+    # value before reading the history. Without the lock both calls read the
+    # same stale state and may pick the same image.
+    async with coordinator.random_upload_lock:
 
-    dir_history = dict(device_history.get(media_directory, {})) if isinstance(
-        device_history.get(media_directory), dict
-    ) else {}
+        # ---------- 3. Read history & validate seen ----------------------
+        history = coordinator.get_random_history()
+        device_history = dict(history.get(pp_device_id, {}))
 
-    seen: list[str] = list(dir_history.get("seen", []))
-    # Drop URIs that no longer exist in the pool (deleted files / shrunk max_images)
-    seen = [uri for uri in seen if uri in pool_set]
+        dir_history = dict(device_history.get(media_directory, {})) if isinstance(
+            device_history.get(media_directory), dict
+        ) else {}
 
-    # ---------- 4. Cross-device exclusion --------------------------------
-    excluded_uris: set[str] = set()
-    for other_device_id, other_state in history.items():
-        if other_device_id == pp_device_id:
-            continue
-        if not isinstance(other_state, dict):
-            continue
-        currently_showing = other_state.get("currently_showing")
-        if currently_showing:
-            excluded_uris.add(currently_showing)
+        seen: list[str] = list(dir_history.get("seen", []))
+        # Drop URIs that no longer exist in the pool (deleted files / shrunk max_images)
+        seen = [uri for uri in seen if uri in pool_set]
 
-    # ---------- 5. Build candidates --------------------------------------
-    candidates = [uri for uri in pool if uri not in seen and uri not in excluded_uris]
+        # ---------- 4. Cross-device exclusion ----------------------------
+        excluded_uris: set[str] = set()
+        for other_device_id, other_state in history.items():
+            if other_device_id == pp_device_id:
+                continue
+            if not isinstance(other_state, dict):
+                continue
+            currently_showing = other_state.get("currently_showing")
+            if currently_showing:
+                excluded_uris.add(currently_showing)
 
-    cycle_reset = False
-    if not candidates:
-        # All images of this directory have been shown for this device → reset.
+        # ---------- 5. Build candidates ----------------------------------
+        candidates = [uri for uri in pool if uri not in seen and uri not in excluded_uris]
+
+        cycle_reset = False
+        if not candidates:
+            # All images of this directory have been shown for this device → reset.
+            _LOGGER.info(
+                "Random upload cycle reset for device %s, directory %s "
+                "(all %d images seen)",
+                pp_device_id, media_directory, len(pool),
+            )
+            seen = []
+            cycle_reset = True
+            candidates = [uri for uri in pool if uri not in excluded_uris]
+
+        if not candidates:
+            # More devices than images — accept cross-device collision rather than
+            # failing. This is a corner case; warn but keep things working.
+            _LOGGER.warning(
+                "Cross-device exclusion left no candidates for device %s, "
+                "directory %s (pool=%d, excluded=%d) — falling back to full pool",
+                pp_device_id, media_directory, len(pool), len(excluded_uris),
+            )
+            candidates = list(pool)
+
+        # ---------- 6. Pick one image ------------------------------------
+        chosen_uri = random.choice(candidates)
         _LOGGER.info(
-            "Random upload cycle reset for device %s, directory %s "
-            "(all %d images seen)",
-            pp_device_id, media_directory, len(pool),
+            "Random upload: device=%s directory=%s chosen=%s "
+            "(pool=%d, seen=%d, excluded=%d, cycle_reset=%s)",
+            pp_device_id, media_directory, chosen_uri,
+            len(pool), len(seen), len(excluded_uris), cycle_reset,
         )
-        seen = []
-        cycle_reset = True
-        candidates = [uri for uri in pool if uri not in excluded_uris]
 
-    if not candidates:
-        # More devices than images — accept cross-device collision rather than
-        # failing. This is a corner case; warn but keep things working.
-        _LOGGER.warning(
-            "Cross-device exclusion left no candidates for device %s, "
-            "directory %s (pool=%d, excluded=%d) — falling back to full pool",
-            pp_device_id, media_directory, len(pool), len(excluded_uris),
+        # ---------- 7. Resolve paper_id ----------------------------------
+        paper_id = await _resolve_paper_id(
+            coordinator, pp_device_id, reuse_existing_paper
         )
-        candidates = list(pool)
 
-    # ---------- 6. Pick one image ----------------------------------------
-    chosen_uri = random.choice(candidates)
-    _LOGGER.info(
-        "Random upload: device=%s directory=%s chosen=%s "
-        "(pool=%d, seen=%d, excluded=%d, cycle_reset=%s)",
-        pp_device_id, media_directory, chosen_uri,
-        len(pool), len(seen), len(excluded_uris), cycle_reset,
-    )
+        # ---------- 8. Fetch image bytes ---------------------------------
+        session = async_get_clientsession(hass)
+        image_data, content_type = await _fetch_media_source(hass, session, chosen_uri)
+        if not image_data:
+            raise HomeAssistantError(f"No image data received for {chosen_uri}")
 
-    # ---------- 7. Resolve paper_id --------------------------------------
-    paper_id = await _resolve_paper_id(
-        coordinator, pp_device_id, reuse_existing_paper
-    )
+        # ---------- 9. Upload --------------------------------------------
+        await _upload_to_api(
+            hass, session, coordinator, paper_id, pp_device_id, ha_device_id,
+            image_data, content_type, reuse_existing_paper,
+            image_uri=chosen_uri,
+            action="upload_random_image",
+        )
 
-    # ---------- 8. Fetch image bytes -------------------------------------
-    session = async_get_clientsession(hass)
-    image_data, content_type = await _fetch_media_source(hass, session, chosen_uri)
-    if not image_data:
-        raise HomeAssistantError(f"No image data received for {chosen_uri}")
-
-    # ---------- 9. Upload -------------------------------------------------
-    await _upload_to_api(
-        hass, session, coordinator, paper_id, pp_device_id, ha_device_id,
-        image_data, content_type, reuse_existing_paper,
-        image_uri=chosen_uri,
-        action="upload_random_image",
-    )
-
-    # ---------- 10. Persist updated history ------------------------------
-    # Note: we persist the history even when the API discards the upload as
-    # "too similar" (skippedUpload=true). That mirrors what the user actually
-    # sees: from the device's perspective the image was processed, and we
-    # don't want to retry the same too-similar image on the next call.
-    # If the upload failed entirely, _upload_to_api raises and we never reach
-    # this point, so the failed image stays in the candidate pool for the
-    # next call.
-    seen.append(chosen_uri)
-    dir_history["seen"] = seen
-    dir_history["max_images"] = max_images
-    device_history[media_directory] = dir_history
-    device_history["currently_showing"] = chosen_uri
-    history[pp_device_id] = device_history
-    coordinator.update_random_history(history)
+        # ---------- 10. Persist updated history --------------------------
+        # Note: we persist the history even when the API discards the upload
+        # as "too similar" (skippedUpload=true). That mirrors what the user
+        # actually sees: from the device's perspective the image was processed.
+        # If the upload failed entirely, _upload_to_api raises and we never
+        # reach this point, so the failed image stays in the candidate pool.
+        seen.append(chosen_uri)
+        dir_history["seen"] = seen
+        dir_history["max_images"] = max_images
+        device_history[media_directory] = dir_history
+        device_history["currently_showing"] = chosen_uri
+        history[pp_device_id] = device_history
+        coordinator.update_random_history(history)
 
 
 async def _list_images_in_directory(

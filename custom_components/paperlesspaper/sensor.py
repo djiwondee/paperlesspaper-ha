@@ -35,6 +35,16 @@
 #                    needed. This ensures HA correctly converts and displays the
 #                    timestamp in the user's local timezone everywhere (UI,
 #                    history, logbook, Activities).
+# 2026-06-01  1.1.0  Added two new diagnostic sensors sourced from the
+#                    activate events polled via GET /devices/events:
+#                    - PaperlessWifiRssiSensor: WiFi signal strength in dBm.
+#                      Updated on every device wake-up (activate event).
+#                    - PaperlessOrientationSensor: display orientation (0–3).
+#                      Updated on every device wake-up (activate event).
+#                    Both sensors are diagnostic, enabled by default, and
+#                    read from the coordinator device dict fields wifi_rssi
+#                    and orientation which are populated by the coordinator's
+#                    _process_device_events() after each activate event.
 # =============================================================================
 
 from __future__ import annotations
@@ -78,8 +88,6 @@ async def async_setup_entry(
     """
     coordinator: PaperlessCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    # Seed known_device_ids with all devices present at startup and add
-    # their entities immediately — this is the reliable path.
     known_device_ids: set[str] = set()
     initial_entities = []
     for device in coordinator.data or []:
@@ -89,7 +97,6 @@ async def async_setup_entry(
     if initial_entities:
         async_add_entities(initial_entities)
 
-    # Listener for devices added after initial setup.
     @callback
     def _async_add_sensors_for_new_devices() -> None:
         """Detect new devices on every coordinator refresh and add their sensors."""
@@ -116,6 +123,8 @@ def _sensors_for_device(
         PaperlessNextSyncSensor(coordinator, device),
         PaperlessSleepTimeSensor(coordinator, device),
         PaperlessSleepTimePredictSensor(coordinator, device),
+        PaperlessWifiRssiSensor(coordinator, device),
+        PaperlessOrientationSensor(coordinator, device),
     ]
 
 
@@ -217,25 +226,19 @@ class PaperlessBatLevelSensor(PaperlessBaseSensor):
                 / (BAT_VOLTAGE_MAX - BAT_VOLTAGE_MIN)
                 * 100
             )
-            # Clamp to valid range to handle out-of-range hardware readings
             return max(0, min(100, round(percentage)))
         except (ValueError, TypeError):
             return None
 
 
 class PaperlessBatVoltageSensor(PaperlessBaseSensor):
-    """Sensor: raw battery voltage in Volts.
-
-    Provides the raw voltage reading from the API (converted from mV to V).
-    Useful for diagnostics and for users who want to monitor exact voltage.
-    """
+    """Sensor: raw battery voltage in Volts."""
 
     _field = "bat_level"
     _attr_icon = "mdi:sine-wave"
     _attr_device_class = SensorDeviceClass.VOLTAGE
     _attr_native_unit_of_measurement = "V"
     _attr_state_class = SensorStateClass.MEASUREMENT
-    # Disabled by default — enable manually if raw voltage monitoring is needed
     _attr_entity_registry_enabled_default = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -258,20 +261,7 @@ class PaperlessBatVoltageSensor(PaperlessBaseSensor):
 
 
 class PaperlessNextSyncSensor(PaperlessBaseSensor):
-    """Sensor: next scheduled device wake-up time as datetime.
-
-    The API field 'nextDeviceSync' contains the timestamp at which the device
-    is scheduled to wake up and check for new content. This represents the
-    device's periodic update interval — NOT a one-time sync event and NOT the
-    time at which a newly uploaded image will be displayed.
-
-    The coordinator stores this value as a timezone-aware datetime object (UTC).
-    HA automatically converts it to the user's local timezone for display.
-
-    Translation key: next_device_sync
-    EN label: "Update Interval"
-    DE label: "Aktualisierungsintervall"
-    """
+    """Sensor: next scheduled device wake-up time as datetime."""
 
     _field = "next_device_sync"
     _attr_icon = "mdi:clock-outline"
@@ -283,33 +273,18 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
 
     @property
     def native_value(self) -> datetime | None:
-        """Return next sync as a timezone-aware datetime object (UTC).
-
-        The coordinator already provides a datetime object — no conversion
-        needed here. HA uses the timezone info to display the correct local
-        time in the UI, history, and logbook.
-        """
+        """Return next sync as a timezone-aware datetime object (UTC)."""
         if self._device is None:
             return None
         return self._device.get("next_device_sync")
 
 
 class PaperlessSleepTimeSensor(PaperlessBaseSensor):
-    """Sensor: configured sleep interval in seconds.
-
-    This is the sleep duration currently configured on the device firmware.
-    It describes how long the device sleeps between wake cycles.
-    A new value only takes effect after the device fetches it on its next
-    wake cycle.
-
-    Note: This is the raw configured value — not a prediction and not a
-    timestamp indicating when the next image will be displayed.
-    """
+    """Sensor: configured sleep interval in seconds."""
 
     _field = "sleep_time"
     _attr_icon = "mdi:sleep"
     _attr_native_unit_of_measurement = "s"
-    # No entity_category — sensor remains visible in the main Sensors section
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -317,26 +292,12 @@ class PaperlessSleepTimeSensor(PaperlessBaseSensor):
 
 
 class PaperlessSleepTimePredictSensor(PaperlessBaseSensor):
-    """Sensor: predicted sleep interval in seconds until the next device wake-up.
-
-    This is the API's prediction of how long the device will sleep in its
-    current cycle. It differs from sleep_time (the configured value) in that
-    it reflects the device's actual expected behavior based on current state.
-
-    Important: This sensor does NOT indicate when a newly uploaded image will
-    appear on the display — it only describes the predicted sleep duration of
-    the current wake/sleep cycle.
-
-    Marked as diagnostic and disabled by default, as it is rarely needed
-    for day-to-day automations. Enable manually if sleep prediction monitoring
-    is required.
-    """
+    """Sensor: predicted sleep interval in seconds until the next device wake-up."""
 
     _field = "sleep_time_predict"
     _attr_icon = "mdi:sleep"
     _attr_native_unit_of_measurement = "s"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    # Disabled by default — enable manually if sleep prediction monitoring is needed
     _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
@@ -344,3 +305,121 @@ class PaperlessSleepTimePredictSensor(PaperlessBaseSensor):
         super().__init__(
             coordinator, device, "sleep_time_predict", "sleep_time_predict"
         )
+
+
+class PaperlessWifiRssiSensor(PaperlessBaseSensor):
+    """Sensor: WiFi signal strength in dBm from the latest activate event.
+
+    Updated on every device wake-up cycle when the activate event is received
+    via GET /devices/events. The value is populated by the coordinator's
+    _process_device_events() method into the device dict field 'wifi_rssi'.
+
+    Typical range: -30 dBm (excellent) to -90 dBm (very weak).
+    Returns None between the initial setup and the first wake-up event.
+
+    Note: device_class is intentionally omitted. SensorDeviceClass.SIGNAL_STRENGTH
+    causes HA to override the entity name with its own built-in translation
+    ("Signal strength") instead of our translation_key "wifi_rssi". Without
+    device_class the translation_key is used and the correct label is shown.
+    """
+
+    _field = "wifi_rssi"
+    _attr_icon = "mdi:wifi"
+    # No device_class — see docstring above
+    _attr_native_unit_of_measurement = "dBm"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    # Enabled by default — useful for diagnosing connectivity issues
+
+    def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
+        """Initialize."""
+        super().__init__(coordinator, device, "wifi_rssi", "wifi_signal_strength")
+
+    @property
+    def native_value(self) -> int | None:
+        """Return WiFi RSSI in dBm."""
+        if self._device is None:
+            return None
+        val = self._device.get("wifi_rssi")
+        if val is None:
+            return None
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return None
+
+
+class PaperlessOrientationSensor(PaperlessBaseSensor):
+    """Sensor: display orientation from the latest activate event.
+
+    Updated on every device wake-up cycle when the activate event is received
+    via GET /devices/events. The value is populated by the coordinator's
+    _process_device_events() method into the device dict field 'orientation'.
+
+    Known device values:
+        0 = Portrait
+        3 = Landscape (both +90° and -90° map to 3)
+    Values 1 and 2 are not currently reported by the hardware.
+
+    The sensor exposes a human-readable string state ("portrait" / "landscape"
+    / "unknown") rather than the raw integer so the HA UI displays a
+    meaningful label without requiring a template. The raw value is preserved
+    in extra_state_attributes for automation authors who need the integer.
+    """
+
+    _field = "orientation"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    # No device_class, no unit, no state_class — string state sensor
+    # Enabled by default — useful for diagnosing frame mounting issues
+
+    # Map raw API integer → internal state string (used as translation key)
+    _ORIENTATION_MAP: dict[int, str] = {
+        0: "portrait",
+        3: "landscape",
+    }
+
+    def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
+        """Initialize."""
+        super().__init__(coordinator, device, "orientation", "frame_orientation")
+
+    @property
+    def icon(self) -> str:
+        """Return an icon matching the current orientation."""
+        val = self._device.get("orientation") if self._device else None
+        if val is not None:
+            try:
+                if int(val) == 3:
+                    return "mdi:phone-rotate-landscape"
+            except (ValueError, TypeError):
+                pass
+        return "mdi:phone-rotate-portrait"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return orientation as a human-readable string state.
+
+        Returns "portrait", "landscape", or "unknown" for unmapped values.
+        Returns None when no activate event has been received yet.
+        """
+        if self._device is None:
+            return None
+        val = self._device.get("orientation")
+        if val is None:
+            return None
+        try:
+            return self._ORIENTATION_MAP.get(int(val), "unknown")
+        except (ValueError, TypeError):
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Expose the raw orientation integer for automations."""
+        if self._device is None:
+            return {}
+        val = self._device.get("orientation")
+        if val is None:
+            return {}
+        try:
+            return {"orientation_raw": int(val)}
+        except (ValueError, TypeError):
+            return {}

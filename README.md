@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Validate](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml)
@@ -15,17 +15,18 @@ Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directl
 
 ## Features
 
-- **Automatic device discovery** - Devices in your paperlesspaper organization appear automatically in HA
+- **Automatic device discovery** — Devices in your paperlesspaper organization appear automatically in HA
 - **Multi-device support** — Manage multiple ePaper displays from a single integration entry
-- **Device sensors** — Monitor battery level, sync status, next wake-up time, sleep time, and more
+- **Device sensors** — Monitor battery level, sync status, next wake-up time, sleep time, WiFi signal strength, and display orientation
+- **Device event polling** — The integration polls the paperlesspaper event API on every coordinator cycle and fires native HA events when a device wakes up or changes state
 - **Connectivity sensor** — Monitor whether your display is reachable
-- **Update sensor** — Know when an update is available
-- **Reset/Reboot Button** - Force a soft init of your ePaper device
+- **Update sensor** — Know when an update is pending
+- **Reset/Reboot Button** — Force a soft init of your ePaper device
 - **upload_image action** — Send any image from HA media sources to your ePaper display
 - **upload_random_image action** — Configure a media library folder once and have the integration cycle through it automatically. Each call shows the next random image; no repeats until the cycle finishes, and the same image is never shown on two frames at once
-- **Activity feedback** — Every upload (success, skipped or failed) appears on the device's Activity timeline and is available as an automation trigger
-- **Resilient upload pipeline**  — Transient API errors (HTTP 408/429/502/503/504, connection drops) are retried automatically with exponential backoff, honouring the server's `Retry-After` hint when provided
-- **Force new paper** — Optionally create a fresh paper slot before uploading (useful for first-time setup or after clearing papers in the app)
+- **Activity feedback** — Every upload (success, skipped or failed) and every device wake-up or state change appears on the device's Activity timeline and is available as an automation trigger
+- **Resilient upload pipeline** — Transient API errors (HTTP 408/429/502/503/504, connection drops) are retried automatically with exponential backoff, honouring the server's `Retry-After` hint when provided
+- **Force new paper** — Optionally create a fresh paper slot before uploading
 - **Automation-ready** — Trigger image updates from time schedules, sensors, or any HA event
 
 <img width="1007" height="895" alt="Device overview at a glance" src="https://github.com/user-attachments/assets/195fbcd3-4483-4e6b-9606-b040edd676b4" />
@@ -140,13 +141,15 @@ For each ePaper device the integration creates:
 
 ### Sensors
 
-| Entity | Description | Unit |
-|---|---|---|
-| `sensor.<device>_battery_level` | Battery level | % |
-| `sensor.<device>_battery_voltage` | Battery voltage | V |
-| `sensor.<device>_next_sync` | Next scheduled wake-up time | datetime |
-| `sensor.<device>_sleep_time` | Configured sleep interval | s |
-| `sensor.<device>_sleep_time_predicted` | Predicted sleep interval | s |
+| Entity | Description | Unit | Category |
+|---|---|---|---|
+| `sensor.<device>_battery_level` | Battery level calculated from voltage | % | Diagnostic |
+| `sensor.<device>_battery_voltage` | Raw battery voltage *(disabled by default)* | V | Diagnostic |
+| `sensor.<device>_update_interval` | Next scheduled device wake-up time | datetime | — |
+| `sensor.<device>_sleep_interval` | Configured sleep interval | s | — |
+| `sensor.<device>_predicted_sleep_interval` | Predicted sleep interval *(disabled by default)* | s | Diagnostic |
+| `sensor.<device>_wifi_signal_strength` | WiFi signal strength at last wake-up | dBm | Diagnostic |
+| `sensor.<device>_frame_orientation` | Display orientation at last wake-up | portrait / landscape | Diagnostic |
 
 ### Binary Sensors
 
@@ -164,6 +167,103 @@ For each ePaper device the integration creates:
 | `button.<device>_reset_sensors` | Reset all sensors on the device to factory defaults |
 
 > **Warning:** The reset sensors button wipes all variables and memory on the device and triggers a reboot. Use with caution!
+
+---
+
+## Device Event Polling
+
+In addition to the regular status poll (battery, sync state, next wake-up), the integration also polls the paperlesspaper event API (`GET /devices/events/{id}`) on every coordinator cycle. This provides two important capabilities:
+
+### How it works
+
+ePaper displays are battery-powered and wake up on a configurable schedule (typically every 60 minutes) to check for new images and report their state. Each wake-up generates two types of events in the paperlesspaper API:
+
+- **`activate`** — fired when the device wakes up. Contains the current battery voltage, firmware version, WiFi signal strength, display orientation, and sleep timeout.
+- **`state`** — fired when the device completes an action, e.g. `update_ok` (picture displayed), `download_ok` (picture downloaded), `update_failed`, `update_checked_nopicture` (no new picture found).
+
+The integration fetches all new events since the last poll on every coordinator cycle and fires them as native HA bus events in chronological order.
+
+### Why sensor values update only every ~60 minutes
+
+`WiFi Signal Strength` and `Frame Orientation` are sourced exclusively from the `activate` event payload — they are not available from the regular ping endpoint. Since the device only wakes up once per sleep interval (default: 3600 seconds / 60 minutes), these sensors will show `Unknown` after a fresh HA start or restart until the device wakes up for the first time. After the first wake-up, the last-known values are retained across poll cycles so the sensors never revert to `Unknown` during normal operation.
+
+### HA Events
+
+The integration fires the following HA bus events that can be used as automation triggers:
+
+#### `paperlesspaper_device_woke_up`
+
+Fired on every device wake-up (`activate` event).
+
+| Field | Type | Description |
+|---|---|---|
+| `device_id` | str | HA device registry ID |
+| `pp_device_id` | str | paperlesspaper internal device ID |
+| `bat_mv` | int \| None | Battery voltage in millivolts |
+| `fw` | str \| None | Firmware version, e.g. `"2.0.38"` |
+| `wifi_rssi` | int \| None | WiFi signal strength in dBm (negative integer) |
+| `timeout_s` | int \| None | Configured sleep interval in seconds |
+| `timestamp_ms` | int | Event timestamp as millisecond epoch (UTC) |
+
+**Example automation trigger:**
+```yaml
+trigger:
+  - platform: event
+    event_type: paperlesspaper_device_woke_up
+    event_data:
+      pp_device_id: "69e4f75b2a1fa22011c6b01c"
+```
+
+#### `paperlesspaper_device_state_changed`
+
+Fired on every device state change (`state` event).
+
+| Field | Type | Description |
+|---|---|---|
+| `device_id` | str | HA device registry ID |
+| `pp_device_id` | str | paperlesspaper internal device ID |
+| `state` | str | State string — see known values below |
+| `timestamp_ms` | int | Event timestamp as millisecond epoch (UTC) |
+
+**Known `state` values:**
+
+| Value | Meaning |
+|---|---|
+| `update_ok` | Picture was successfully written to the display |
+| `download_ok` | Picture was downloaded to the device |
+| `update_failed` | Picture update failed on the device |
+| `update_checked_ok` | Device checked for updates — update available |
+| `update_checked_nopicture` | Device checked for updates — no new picture |
+
+**Example automation — notify on update failure:**
+```yaml
+trigger:
+  - platform: event
+    event_type: paperlesspaper_device_state_changed
+    event_data:
+      state: "update_failed"
+action:
+  - service: notify.mobile_app
+    data:
+      message: "ePaper display failed to update!"
+```
+
+#### `paperlesspaper_image_uploaded`
+
+Fired after every image upload attempt (success, skipped, or failed).
+
+| Field | Type | Description |
+|---|---|---|
+| `device_id` | str | HA device registry ID |
+| `pp_device_id` | str | paperlesspaper internal device ID |
+| `paper_id` | str | Paper slot ID used for this upload |
+| `status` | str | `success`, `skipped`, or `failed` |
+| `image_uri` | str | Media source URI or URL of the uploaded image |
+| `action` | str | `upload_image` or `upload_random_image` |
+| `attempt` | int | 1-based attempt number |
+| `similarity_percentage` | float \| None | API-reported similarity to the previous image |
+| `skipped_upload` | bool \| None | `true` if the API discarded the upload as too similar |
+| `error` | str \| None | Error message for failed uploads |
 
 ---
 
