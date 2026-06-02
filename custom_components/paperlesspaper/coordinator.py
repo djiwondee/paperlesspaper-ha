@@ -50,11 +50,6 @@
 #                    two automations firing simultaneously both read a stale
 #                    history before either write, causing the same image to be
 #                    shown on multiple devices at the same time.
-# 2026-06-01  1.1.0  Extended _process_device_events: after processing all
-#                    events, the latest activate-event values for wifi_rssi
-#                    and orientation are merged into the device dict so the
-#                    new WifiRssi and Orientation sensor entities can read
-#                    them via coordinator.data like all other sensor fields.
 # 2026-06-01  1.0.2  Added device event polling via GET /devices/events/{id}:
 #                    - _last_event_poll_ts: in-memory dict[device_id -> int|None]
 #                      tracking the timestamp of the last successfully fetched
@@ -84,6 +79,11 @@
 #                    - _async_update_data(): calls _process_device_events()
 #                      for each reachable device after the ping, passing the
 #                      HA device_id looked up from the device registry.
+# 2026-06-01  1.1.0  Extended _process_device_events: after processing all
+#                    events, the latest activate-event values for wifi_rssi
+#                    and orientation are merged into the device dict so the
+#                    new WifiRssi and Orientation sensor entities can read
+#                    them via coordinator.data like all other sensor fields.
 # =============================================================================
 
 from __future__ import annotations
@@ -900,9 +900,13 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         device_registry = dr.async_get(self.hass)
         ha_device_id_map: dict[str, str] = {}
         for ha_device in device_registry.devices.values():
-            for domain, identifier in ha_device.identifiers:
-                if domain == DOMAIN:
-                    ha_device_id_map[identifier] = ha_device.id
+            for identifier_tuple in ha_device.identifiers:
+                # Use positional access instead of tuple unpacking — the
+                # identifiers tuple may contain more than 2 elements in some
+                # HA versions, causing a ValueError on (domain, identifier)
+                # unpacking. We only need the first two elements.
+                if len(identifier_tuple) >= 2 and identifier_tuple[0] == DOMAIN:
+                    ha_device_id_map[identifier_tuple[1]] = ha_device.id
 
         try:
             devices = await self._fetch_device_list()
