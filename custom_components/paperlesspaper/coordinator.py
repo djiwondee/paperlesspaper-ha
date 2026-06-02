@@ -45,6 +45,45 @@
 #                    the pool for every device. Per-device currently_showing
 #                    values are preserved so cross-device duplicate avoidance
 #                    keeps working. Called by the Options Flow reset checkbox.
+# 2026-06-01  1.0.2  Added random_upload_lock (asyncio.Lock) to serialise
+#                    concurrent upload_random_image calls. Without the lock,
+#                    two automations firing simultaneously both read a stale
+#                    history before either write, causing the same image to be
+#                    shown on multiple devices at the same time.
+# 2026-06-01  1.1.0  Extended _process_device_events: after processing all
+#                    events, the latest activate-event values for wifi_rssi
+#                    and orientation are merged into the device dict so the
+#                    new WifiRssi and Orientation sensor entities can read
+#                    them via coordinator.data like all other sensor fields.
+# 2026-06-01  1.0.2  Added device event polling via GET /devices/events/{id}:
+#                    - _last_event_poll_ts: in-memory dict[device_id -> int|None]
+#                      tracking the timestamp of the last successfully fetched
+#                      event per device. Intentionally not persisted — resets
+#                      on HA restart so the first poll after restart uses
+#                      time.time() as the start of the fetch window,
+#                      preventing gaps while avoiding full history re-fetch.
+#                    - _get_default_since_ts(): returns the appropriate
+#                      DateStart timestamp when no prior event poll exists.
+#                      Uses now minus one poll interval as the fetch window start
+#                      or falls back to one poll-interval ago for fresh starts.
+#                    - _fetch_device_events(): calls the API with DateStart
+#                      filter; returns raw event list or [] on error.
+#                    - _parse_device_event(): normalises a raw API event into
+#                      a consistent internal dict. Handles the two structurally
+#                      different event types:
+#                        "activate" — EventMessage is a JSON string with keys
+#                          file, fw, bat, wake, wifi, usb, orient, timeout.
+#                        "state"    — EventMessage is a plain string, e.g.
+#                          "update_ok", "download_ok", "update_failed".
+#                      Unknown types are logged at DEBUG and returned as None.
+#                    - _process_device_events(): orchestrates fetch → parse →
+#                      chronological sort → HA event firing. All events are
+#                      fired in ascending timestamp order so HA automation
+#                      triggers fire in the correct sequence even when multiple
+#                      events arrive within a single poll window.
+#                    - _async_update_data(): calls _process_device_events()
+#                      for each reachable device after the ping, passing the
+#                      HA device_id looked up from the device registry.
 # =============================================================================
 
 from __future__ import annotations
@@ -53,11 +92,13 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 import json
 import logging
+import time
 
 import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -69,6 +110,10 @@ from .const import (
     CONF_POLLING_INTERVAL,
     CONF_RANDOM_UPLOAD_HISTORY,
     DEFAULT_POLLING_INTERVAL,
+    DEVICE_STATE_UPDATE_FAILED,
+    DOMAIN,
+    EVENT_DEVICE_STATE_CHANGED,
+    EVENT_DEVICE_WOKE_UP,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -125,6 +170,29 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         self.api_key: str = entry.data[CONF_API_KEY]
         self.organization_id: str = entry.data[CONF_ORGANIZATION_ID]
         self._session = async_get_clientsession(hass)
+
+        # Lock to serialise concurrent upload_random_image calls.
+        # Ensures the history read → candidate selection → upload → history
+        # write sequence is atomic across all devices in this org, so the
+        # cross-device duplicate-avoidance logic always reads a consistent
+        # currently_showing state.
+        self.random_upload_lock: asyncio.Lock = asyncio.Lock()
+
+        # Cache for sensor values sourced from device events (activate payload).
+        # These values are NOT available from the ping endpoint — they are only
+        # delivered when the device wakes up. We persist them here so sensors
+        # keep their last-known value across poll cycles. The cache is in-memory
+        # only and resets on HA restart (sensors show Unknown until first wake-up).
+        # Structure: {pp_device_id: {"wifi_rssi": int|None, "orientation": int|None}}
+        self._event_sensor_cache: dict[str, dict] = {}
+
+        # In-memory tracking of the last successfully fetched event timestamp
+        # per device (millisecond epoch). None means no prior fetch in this
+        # session — _get_default_since_ts() will determine the start window.
+        # Intentionally not persisted: resets on HA restart so the first poll
+        # after restart uses now minus one poll interval as anchor, preventing
+        # gaps without re-fetching the full event history.
+        self._last_event_poll_ts: dict[str, int | None] = {}
 
     @property
     def _headers(self) -> dict:
@@ -421,6 +489,309 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Ping %s -> error: %s", device_id, err)
             return {"reachable": False}
 
+    # ------------------------------------------------------------------
+    # Device event parsing helpers (static — no instance state needed)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _safe_int(value: str | int | None) -> int | None:
+        """Convert a string or int to int, returning None on failure."""
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _parse_wifi_rssi(wifi_str: str | None) -> int | None:
+        """Extract the RSSI value from the activate-event wifi field.
+
+        The API encodes wifi as "<connected>,<rssi>", e.g. "1, -56".
+        Returns the RSSI as a negative integer, or None if unparseable.
+        """
+        if not wifi_str:
+            return None
+        parts = wifi_str.split(",")
+        if len(parts) >= 2:
+            try:
+                return int(parts[1].strip())
+            except (ValueError, TypeError):
+                return None
+        return None
+
+    @staticmethod
+    def _parse_device_event(raw: dict) -> dict | None:
+        """Normalise a raw API event dict into a consistent internal structure.
+
+        The two event types have structurally different EventMessage fields:
+          - "activate": EventMessage is a JSON-encoded string containing keys
+            such as fw, bat, wifi, orient, timeout.
+          - "state": EventMessage is a plain string, e.g. "update_ok".
+
+        Returns None for events that cannot be parsed or have an unknown type,
+        so the caller can simply filter with: [e for e in map(...) if e].
+        """
+        event_type = (raw.get("EventType") or "").lower()
+        # Prefer EventTimestamp; fall back to AwsTimestamp if missing
+        ts_ms = raw.get("EventTimestamp") or raw.get("AwsTimestamp")
+        device_id = raw.get("DeviceId", "")
+        message_raw = raw.get("EventMessage", "")
+
+        if not ts_ms:
+            _LOGGER.debug("Dropping event with no timestamp: %s", raw)
+            return None
+
+        if event_type == "activate":
+            # EventMessage is a JSON string — parse it defensively
+            try:
+                payload = json.loads(message_raw)
+            except (json.JSONDecodeError, TypeError):
+                _LOGGER.warning(
+                    "Could not parse activate payload for device %s: %r",
+                    device_id, message_raw,
+                )
+                payload = {}
+
+            return {
+                "type": "activate",
+                "device_id": device_id,
+                "timestamp_ms": int(ts_ms),
+                "fw": payload.get("fw"),
+                "bat_mv": PaperlessCoordinator._safe_int(payload.get("bat")),
+                "wifi_rssi": PaperlessCoordinator._parse_wifi_rssi(payload.get("wifi")),
+                "orientation": PaperlessCoordinator._safe_int(payload.get("orient")),
+                "timeout_s": PaperlessCoordinator._safe_int(payload.get("timeout")),
+                "usb": payload.get("usb") == "1",
+            }
+
+        if event_type == "state":
+            # EventMessage is a plain string
+            return {
+                "type": "state",
+                "device_id": device_id,
+                "timestamp_ms": int(ts_ms),
+                "message": message_raw,
+            }
+
+        _LOGGER.debug(
+            "Unknown event type %r for device %s — skipped", event_type, device_id
+        )
+        return None
+
+    # ------------------------------------------------------------------
+    # Device event polling helpers
+    # ------------------------------------------------------------------
+
+    def _get_default_since_ts(self) -> int:
+        """Return the DateStart timestamp (ms) to use when no prior event poll exists.
+
+        Called only when _last_event_poll_ts has no entry for the device yet
+        (first poll after start or restart). Returns now minus one poll interval
+        so the initial fetch window is bounded and predictable regardless of
+        how long the device or HA has been running.
+
+        We intentionally do not rely on any DataUpdateCoordinator attribute
+        for the last success time — those attributes differ across HA versions.
+        Instead we use the system clock directly, which is always available.
+        """
+        polling_interval = self.entry.options.get(
+            CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL
+        )
+        return int((time.time() - polling_interval) * 1000)
+
+    async def _fetch_device_events(
+        self, device_id: str, since_ts_ms: int
+    ) -> list[dict]:
+        """Fetch device events from the API since the given timestamp.
+
+        Uses the DateStart query parameter to limit results to events that
+        occurred after the last poll. Returns an empty list on any error so
+        that a failed event fetch never interrupts the main poll cycle.
+
+        The API endpoint: GET /devices/events/{deviceId}?DateStart=<ISO8601>
+
+        DateStart expects an ISO 8601 date-time string. We convert the
+        millisecond epoch timestamp to UTC ISO format before passing it.
+        """
+        # Convert ms epoch to ISO 8601 UTC string as required by the API.
+        # Both DateStart and DateEnd are required — without them the endpoint
+        # returns the device object instead of the events list.
+        # Timestamps are truncated to whole seconds (%S without sub-seconds)
+        # to match the API's second-granular comparison. Using millisecond
+        # precision causes the same event to reappear on subsequent polls
+        # because the API's DateStart filter is inclusive at second granularity.
+        since_dt = datetime.fromtimestamp(since_ts_ms / 1000, tz=timezone.utc)  # noqa: UP017
+        since_iso = since_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        now_iso = datetime.fromtimestamp(time.time(), tz=timezone.utc).strftime(  # noqa: UP017
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+
+        try:
+            async with self._session.get(
+                f"{API_BASE_URL}/devices/events/{device_id}",
+                headers=self._headers,
+                params={"DateStart": since_iso, "DateEnd": now_iso},
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status != 200:
+                    _LOGGER.debug(
+                        "Event fetch for device %s returned HTTP %s — skipping",
+                        device_id, resp.status,
+                    )
+                    return []
+                data = await resp.json()
+                # The API always returns a dict. Events are under the "message"
+                # key. When no events exist in the time window, "message" is
+                # absent or empty and only the "device" object is returned.
+                if isinstance(data, dict):
+                    events = data.get("message")
+                    if isinstance(events, list):
+                        _LOGGER.debug(
+                            "Event fetch for device %s: %d event(s) in window",
+                            device_id, len(events),
+                        )
+                        return events
+                    # No "message" key — no events in this time window
+                    _LOGGER.debug(
+                        "No events in window for device %s", device_id,
+                    )
+                    return []
+                # Unexpected top-level type (should not happen)
+                _LOGGER.debug(
+                    "Unexpected event response shape for device %s: %s",
+                    device_id, type(data),
+                )
+                return []
+        except aiohttp.ClientError as err:
+            _LOGGER.debug(
+                "Event fetch for device %s failed: %s — skipping", device_id, err
+            )
+            return []
+
+    async def _process_device_events(
+        self,
+        pp_device_id: str,
+        ha_device_id: str | None,
+        since_ts_ms: int,
+    ) -> None:
+        """Fetch, parse, sort and fire HA events for all new device events.
+
+        Guarantees chronological ordering by sorting parsed events by
+        timestamp before firing — the API does not guarantee a specific
+        order, and within a single poll window multiple events may arrive.
+
+        Fires HA bus events in ascending timestamp order so HA automation
+        triggers process events in the correct real-world sequence.
+
+        After all events are fired, updates _last_event_poll_ts to the
+        timestamp of the newest event seen (or the current time if no events
+        were returned), so the next poll window starts exactly where this
+        one ended.
+        """
+        raw_events = await self._fetch_device_events(pp_device_id, since_ts_ms)
+
+        if not raw_events:
+            # No new events — advance the poll window to now so we don't
+            # re-request the same window on the next cycle.
+            self._last_event_poll_ts[pp_device_id] = int(time.time() * 1000)
+            return
+
+        # Parse and drop unparseable events
+        parsed = [
+            e
+            for e in (self._parse_device_event(r) for r in raw_events)
+            if e is not None
+        ]
+
+        if not parsed:
+            self._last_event_poll_ts[pp_device_id] = int(time.time() * 1000)
+            return
+
+        # Sort ascending by timestamp so HA triggers fire in the correct order
+        parsed.sort(key=lambda e: e["timestamp_ms"])
+
+        _LOGGER.debug(
+            "Processing %d event(s) for device %s (since ts=%d)",
+            len(parsed), pp_device_id, since_ts_ms,
+        )
+
+        # Track the last activate event to merge sensor values afterwards
+        latest_activate: dict | None = None
+
+        for event in parsed:
+            if event["type"] == "activate":
+                latest_activate = event
+                _LOGGER.info(
+                    "Device woke up: device=%s bat_mv=%s fw=%s wifi_rssi=%s timeout_s=%s",
+                    pp_device_id,
+                    event.get("bat_mv"),
+                    event.get("fw"),
+                    event.get("wifi_rssi"),
+                    event.get("timeout_s"),
+                )
+                payload: dict = {
+                    "pp_device_id": pp_device_id,
+                    "bat_mv": event.get("bat_mv"),
+                    "fw": event.get("fw"),
+                    "wifi_rssi": event.get("wifi_rssi"),
+                    "timeout_s": event.get("timeout_s"),
+                    "timestamp_ms": event["timestamp_ms"],
+                }
+                if ha_device_id is not None:
+                    # Attach HA device_id so logbook and device triggers can
+                    # associate the event with the correct device.
+                    payload["device_id"] = ha_device_id
+                self.hass.bus.async_fire(EVENT_DEVICE_WOKE_UP, payload)
+
+            elif event["type"] == "state":
+                state_msg = event.get("message", "")
+                log_fn = _LOGGER.warning if state_msg == DEVICE_STATE_UPDATE_FAILED else _LOGGER.info
+                log_fn(
+                    "Device state changed: device=%s state=%s",
+                    pp_device_id, state_msg,
+                )
+                payload = {
+                    "pp_device_id": pp_device_id,
+                    "state": state_msg,
+                    "timestamp_ms": event["timestamp_ms"],
+                }
+                if ha_device_id is not None:
+                    payload["device_id"] = ha_device_id
+                self.hass.bus.async_fire(EVENT_DEVICE_STATE_CHANGED, payload)
+
+        # Cache the latest activate-event sensor values. These are NOT
+        # available from the ping endpoint and must survive across poll cycles.
+        # The cache is applied into coordinator.data in _async_update_data
+        # after each poll so sensors always read the last-known values.
+        if latest_activate is not None:
+            self._event_sensor_cache[pp_device_id] = {
+                "wifi_rssi": latest_activate.get("wifi_rssi"),
+                "orientation": latest_activate.get("orientation"),
+            }
+            _LOGGER.debug(
+                "Event sensor cache updated for device %s: wifi_rssi=%s orientation=%s",
+                pp_device_id,
+                latest_activate.get("wifi_rssi"),
+                latest_activate.get("orientation"),
+            )
+            # The cache values will be applied into the device dict in
+            # _async_update_data via device.update(cached) after the ping.
+            # The coordinator's normal listener dispatch at the end of the
+            # poll cycle will then notify all sensor entities to update.
+
+        # Advance the poll window to the last event's timestamp rounded up
+        # to the next full second. Combined with second-granular DateStart
+        # formatting this ensures the processed event is excluded from the
+        # next poll window without risking a gap that could miss new events
+        # in the same second.
+        last_ts_s = parsed[-1]["timestamp_ms"] // 1000
+        self._last_event_poll_ts[pp_device_id] = (last_ts_s + 1) * 1000
+
+    # ------------------------------------------------------------------
+    # Device list fetch with retry
+    # ------------------------------------------------------------------
+
     async def _fetch_device_list(self) -> list[dict]:
         """Fetch the list of devices for this organization.
 
@@ -501,13 +872,38 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         # Defensive: this branch is unreachable, but keeps type-checkers happy.
         raise aiohttp.ClientError("Device list fetch failed without specific error")
 
+    # ------------------------------------------------------------------
+    # Main poll cycle
+    # ------------------------------------------------------------------
+
     async def _async_update_data(self) -> list[dict]:
-        """Fetch device list, enrich each device with ping data and paper_id.
+        """Fetch device list, enrich each device with ping data, paper_id, and events.
+
+        For each reachable device the poll cycle runs:
+          1. _fetch_device_list()     — organisation device list
+          2. _ensure_paper_id()       — validate / create paper slot
+          3. _ping_device()           — telemetry (battery, sync status, …)
+          4. _process_device_events() — new events since last poll (activate /
+                                        state), fired as HA bus events in
+                                        chronological order.
+
+        Step 4 is only executed when the device is reachable (ping succeeded).
+        A failure in step 4 never aborts the poll — errors are caught inside
+        _fetch_device_events() and logged at DEBUG level.
 
         Transient errors (502/503/504, connection issues) are handled by
-        _fetch_device_list with backoff. Only persistent failures bubble up
+        _fetch_device_list() with backoff. Only persistent failures bubble up
         as UpdateFailed.
         """
+        # Build a lookup from pp_device_id → HA device_id once per poll cycle
+        # so _process_device_events can attach the correct device_id to events.
+        device_registry = dr.async_get(self.hass)
+        ha_device_id_map: dict[str, str] = {}
+        for ha_device in device_registry.devices.values():
+            for domain, identifier in ha_device.identifiers:
+                if domain == DOMAIN:
+                    ha_device_id_map[identifier] = ha_device.id
+
         try:
             devices = await self._fetch_device_list()
             _LOGGER.debug("Fetched %d device(s)", len(devices))
@@ -521,6 +917,23 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                 # Ping device → enriched status data
                 ping_data = await self._ping_device(device_id)
                 device.update(ping_data)
+
+                # Apply cached event sensor values (wifi_rssi, orientation)
+                # from previous activate events. These survive poll cycles so
+                # sensors keep their last-known value until the next wake-up.
+                cached = self._event_sensor_cache.get(device_id, {})
+                if cached:
+                    device.update(cached)
+
+                # Poll device events — only when device is reachable
+                if ping_data.get("reachable"):
+                    ha_device_id = ha_device_id_map.get(device_id)
+                    since_ts = self._last_event_poll_ts.get(device_id)
+                    if since_ts is None:
+                        since_ts = self._get_default_since_ts()
+                    await self._process_device_events(
+                        device_id, ha_device_id, since_ts
+                    )
 
         except aiohttp.ClientResponseError as err:
             raise UpdateFailed(f"API error: {err.status}") from err
