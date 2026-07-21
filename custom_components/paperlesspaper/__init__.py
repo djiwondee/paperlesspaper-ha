@@ -85,6 +85,16 @@
 #                    read a stale history and pick the same image. Steps 1–2
 #                    (directory listing) remain outside the lock — they are
 #                    pure I/O with no history dependency.
+# 2026-07-20  1.2.0  Added async_remove_config_entry_device(): enables the
+#                    manual "Delete device" button in Settings -> Devices &
+#                    Services for devices no longer reported by the API.
+#                    Deletion is blocked (returns False) for devices that are
+#                    still active, to avoid the entity/device desync that
+#                    would result from deleting a live device (it would
+#                    simply reappear as a duplicate/stale entry on the next
+#                    coordinator refresh). Complements the automatic
+#                    Repairs-based orphan detection and deviceId-based remap
+#                    in coordinator._reconcile_devices().
 # =============================================================================
 
 from __future__ import annotations
@@ -928,3 +938,32 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, config_entry: ConfigEntry, device_entry
+) -> bool:
+    """Allow the user to manually delete a device from the UI.
+
+    Only devices that are no longer reported by the paperlesspaper API are
+    eligible for manual removal. This prevents accidentally deleting a
+    still-active device — such a device would simply reappear on the next
+    coordinator refresh anyway (the entity platforms only track newly
+    discovered device ids in-memory and would not recreate a manually
+    deleted-but-still-active device until an HA restart), leaving stale or
+    duplicate entities behind.
+
+    This is a manual/immediate complement to the automatic Repairs issue and
+    deviceId-based remap raised by coordinator._reconcile_devices(). It gives
+    the user an immediate path via Settings -> Devices & Services without
+    waiting for the missing-device threshold, for devices genuinely gone
+    (not just re-registered under a new id, which the coordinator would
+    already have caught and remapped automatically).
+    """
+    coordinator: PaperlessCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    active_ids = {device["id"] for device in coordinator.data or []}
+    return not any(
+        identifier
+        for domain, identifier in device_entry.identifiers
+        if domain == DOMAIN and identifier in active_ids
+    )

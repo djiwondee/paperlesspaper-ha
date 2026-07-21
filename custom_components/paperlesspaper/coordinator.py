@@ -84,6 +84,41 @@
 #                    and orientation are merged into the device dict so the
 #                    new WifiRssi and Orientation sensor entities can read
 #                    them via coordinator.data like all other sensor fields.
+# 2026-07-20  1.2.0  Added device reconciliation to fix orphaned devices left
+#                    behind when a physical frame is removed and re-registered
+#                    in the paperlesspaper app (new "id", i.e. a new MongoDB
+#                    ObjectId, is assigned on re-registration):
+#                    - _reconcile_devices(): runs at the end of every
+#                      _async_update_data() poll. First tries an automatic
+#                      remap by matching the API's stable hardware "deviceId"
+#                      field (e.g. "epd7-b43a459a7fe4", confirmed stable across
+#                      re-registration) against the deviceId stored in each HA
+#                      device's serial_number field. On a match, the existing
+#                      HA device (and all its entities, history, automation
+#                      references) is remapped onto the new pp "id" instead of
+#                      leaving an orphan and creating a duplicate. Only when
+#                      no match is found after ORPHANED_DEVICE_MISSING_THRESHOLD
+#                      consecutive polls is a fixable Repairs issue raised
+#                      (manual removal or manual remap — see repairs.py).
+#                    - _remap_device(): performs the actual remap — updates
+#                      device registry identifiers, migrates every entity's
+#                      unique_id in place, migrates config_entry.data
+#                      references (CONF_PAPER_IDS, CONF_RANDOM_UPLOAD_HISTORY),
+#                      and raises a non-fixable informational Repairs issue so
+#                      the user sees that an automatic remap happened.
+#                    - async_candidate_devices_for_remap() /
+#                      async_manual_remap(): public wrappers used by
+#                      repairs.py's manual "relink" option, covering devices
+#                      that were already orphaned before this deviceId-based
+#                      matching was introduced (no stored serial_number to
+#                      match against for those — see repairs.py CHANGE HISTORY).
+#                    Also fixed: DeviceInfo.serial_number was always None in
+#                    sensor.py/binary_sensor.py/button.py's _device_info() —
+#                    it read device.get("serial_number"), a key that does not
+#                    exist in the /devices/ list response. Changed to
+#                    device.get("deviceId"), which is present on every device
+#                    and — per user-confirmed API testing — stable across
+#                    re-registration in the paperlesspaper app.
 # =============================================================================
 
 from __future__ import annotations
@@ -98,7 +133,11 @@ import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import (
+    device_registry as dr,
+    entity_registry as er,
+    issue_registry as ir,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -114,6 +153,9 @@ from .const import (
     DOMAIN,
     EVENT_DEVICE_STATE_CHANGED,
     EVENT_DEVICE_WOKE_UP,
+    ISSUE_DEVICE_REMAPPED_PREFIX,
+    ISSUE_ORPHANED_DEVICE_PREFIX,
+    ORPHANED_DEVICE_MISSING_THRESHOLD,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -193,6 +235,14 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         # after restart uses now minus one poll interval as anchor, preventing
         # gaps without re-fetching the full event history.
         self._last_event_poll_ts: dict[str, int | None] = {}
+
+        # Tracks consecutive coordinator cycles in which a previously known
+        # device (present in the HA device registry for this entry) was
+        # missing from the API's device list AND no deviceId-based remap
+        # match was found. Keyed by paperlesspaper device id. Used by
+        # _reconcile_devices() to raise a Repairs issue once
+        # ORPHANED_DEVICE_MISSING_THRESHOLD is reached.
+        self._missing_device_streak: dict[str, int] = {}
 
     @property
     def _headers(self) -> dict:
@@ -447,6 +497,13 @@ class PaperlessCoordinator(DataUpdateCoordinator):
 
         Timestamp fields (e.g. next_device_sync) are stored as timezone-aware
         datetime objects (UTC) so HA can display and convert them correctly.
+
+        Note: the "serial_number" key set here comes from iotDevice.serialNumber
+        and is only present when the ping succeeds. It is a DIFFERENT source
+        than the top-level "deviceId" field returned by the /devices/ list
+        endpoint (see _fetch_device_list / _reconcile_devices), which is always
+        present regardless of reachability and is the field used for HA's
+        DeviceInfo.serial_number and for deviceId-based device reconciliation.
         """
         try:
             async with self._session.get(
@@ -846,7 +903,8 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                 last_error = err
                 last_retry_after = None
                 _LOGGER.warning(
-                    "Device list fetch connection error on attempt %d/%d: %s — will %s",
+                    "Device list fetch connection error on attempt %d/%d: "
+                    "%s — will %s",
                     attempt, max_attempts, err,
                     "retry" if attempt < max_attempts else "give up",
                 )
@@ -893,6 +951,10 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         Step 4 is only executed when the device is reachable (ping succeeded).
         A failure in step 4 never aborts the poll — errors are caught inside
         _fetch_device_events() and logged at DEBUG level.
+
+        After all devices are processed, _reconcile_devices() compares the
+        HA device registry against the fresh device list to detect automatic
+        deviceId-based remaps and orphaned devices (see CHANGE HISTORY).
 
         Transient errors (502/503/504, connection issues) are handled by
         _fetch_device_list() with backoff. Only persistent failures bubble up
@@ -949,4 +1011,281 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Client error: {err}") from err
         else:
+            self._reconcile_devices(devices)
             return devices
+
+    # ------------------------------------------------------------------
+    # Device reconciliation (orphan detection + deviceId-based remap)
+    # ------------------------------------------------------------------
+
+    def _reconcile_devices(self, current_devices: list[dict]) -> None:
+        """Reconcile HA-registered devices against the latest API device list.
+
+        Two mechanisms work together, in this order of precedence:
+
+        1. Automatic remap by hardware deviceId: if a device that is
+           registered in HA is missing from the API response, but a device
+           with the SAME hardware deviceId (e.g. "epd7-b43a459a7fe4", the
+           top-level "deviceId" field from the /devices/ list endpoint) now
+           appears under a NEW paperlesspaper "id" (MongoDB ObjectId), this
+           is the same physical frame that was removed and re-registered in
+           the paperlesspaper app. The existing HA device — and all its
+           entities, history, and automation references — is remapped in
+           place onto the new id. No orphan, no duplicate device is created.
+
+        2. Orphaned-device Repairs issue: only if NO deviceId match is found
+           after ORPHANED_DEVICE_MISSING_THRESHOLD consecutive polls is the
+           device treated as genuinely gone, and a fixable Repairs issue
+           offers manual removal or manual relinking (see repairs.py).
+        """
+        current_by_id = {device["id"]: device for device in current_devices}
+        current_by_device_id = {
+            device["deviceId"]: device["id"]
+            for device in current_devices
+            if device.get("deviceId")
+        }
+
+        device_registry = dr.async_get(self.hass)
+        entity_registry = er.async_get(self.hass)
+        registered_devices = dr.async_entries_for_config_entry(
+            device_registry, self.entry.entry_id
+        )
+
+        # Snapshot of pp ids currently backed by a registry entry, taken
+        # before any remap in this cycle — used only to prune stale streak
+        # entries for devices removed from the registry entirely (e.g.
+        # manually deleted by the user in the meantime).
+        known_registry_pp_ids: set[str] = set()
+        for entry in registered_devices:
+            pp_id = next(
+                (i for d, i in entry.identifiers if d == DOMAIN), None
+            )
+            if pp_id is not None:
+                known_registry_pp_ids.add(pp_id)
+
+        claimed_new_ids: set[str] = set()
+
+        for device_entry in registered_devices:
+            old_pp_id = next(
+                (i for d, i in device_entry.identifiers if d == DOMAIN), None
+            )
+            if old_pp_id is None:
+                continue
+
+            issue_id = f"{ISSUE_ORPHANED_DEVICE_PREFIX}{old_pp_id}"
+
+            if old_pp_id in current_by_id:
+                # Still reporting under its known id — clear stale bookkeeping.
+                if self._missing_device_streak.pop(old_pp_id, None):
+                    ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+                continue
+
+            # Missing under its known id. Check for a deviceId match among
+            # devices reported this cycle that are not already claimed by
+            # another registered device.
+            stored_device_id = device_entry.serial_number
+            new_pp_id = (
+                current_by_device_id.get(stored_device_id)
+                if stored_device_id
+                else None
+            )
+
+            if (
+                new_pp_id
+                and new_pp_id != old_pp_id
+                and new_pp_id not in claimed_new_ids
+                and new_pp_id not in known_registry_pp_ids
+            ):
+                self._remap_device(
+                    device_entry, old_pp_id, new_pp_id,
+                    device_registry, entity_registry,
+                )
+                claimed_new_ids.add(new_pp_id)
+                self._missing_device_streak.pop(old_pp_id, None)
+                ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+                continue
+
+            # No deviceId match (yet) — fall back to orphan tracking.
+            streak = self._missing_device_streak.get(old_pp_id, 0) + 1
+            self._missing_device_streak[old_pp_id] = streak
+
+            _LOGGER.debug(
+                "Orphan streak for %s (%s): %d/%d",
+                device_entry.name_by_user or device_entry.name,
+                old_pp_id, streak, ORPHANED_DEVICE_MISSING_THRESHOLD,
+            )
+
+            if streak == ORPHANED_DEVICE_MISSING_THRESHOLD:
+                _LOGGER.info(
+                    "Device %s (%s) missing from paperlesspaper API for "
+                    "%d consecutive polls with no deviceId match — "
+                    "creating Repairs issue",
+                    device_entry.name_by_user or device_entry.name,
+                    old_pp_id, streak,
+                )
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    issue_id,
+                    is_fixable=True,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="orphaned_device",
+                    translation_placeholders={
+                        "device_name": device_entry.name_by_user
+                        or device_entry.name
+                        or old_pp_id,
+                    },
+                    data={
+                        "device_id": device_entry.id,
+                        "pp_device_id": old_pp_id,
+                        "config_entry_id": self.entry.entry_id,
+                    },
+                )
+
+        # Prune streak entries for devices removed from the registry
+        # entirely so the dict does not grow unbounded over the config
+        # entry's lifetime.
+        for pp_id in list(self._missing_device_streak):
+            if pp_id not in known_registry_pp_ids:
+                self._missing_device_streak.pop(pp_id, None)
+
+    def _remap_device(
+        self,
+        device_entry: dr.DeviceEntry,
+        old_pp_id: str,
+        new_pp_id: str,
+        device_registry: dr.DeviceRegistry,
+        entity_registry: er.EntityRegistry,
+    ) -> None:
+        """Remap an existing HA device (and its entities) onto a new pp id.
+
+        Triggered when a device's hardware deviceId is found again under a
+        new paperlesspaper "id" — i.e. the same physical frame was removed
+        and re-registered in the paperlesspaper app. Preserves the HA
+        device, all entity_ids, history, and customizations by updating the
+        device registry identifiers and migrating every entity's unique_id
+        in place, instead of letting a duplicate device be created on the
+        next entity-platform refresh.
+
+        Must run BEFORE the coordinator's listeners fire (i.e. from within
+        _async_update_data, before returning) so that the entity platforms'
+        "new device" detection sees the already-migrated identifiers/
+        unique_ids and simply reuses the existing device and entities.
+        """
+        _LOGGER.info(
+            "Paperlesspaper device %s (deviceId %s) reappeared under new id "
+            "%s — remapping in place instead of creating a duplicate device",
+            old_pp_id, device_entry.serial_number, new_pp_id,
+        )
+
+        device_registry.async_update_device(
+            device_entry.id,
+            new_identifiers={(DOMAIN, new_pp_id)},
+        )
+
+        old_prefix = f"{old_pp_id}_"
+        for entity_entry in er.async_entries_for_device(
+            entity_registry, device_entry.id, include_disabled_entities=True
+        ):
+            if entity_entry.unique_id.startswith(old_prefix):
+                new_unique_id = new_pp_id + entity_entry.unique_id[len(old_pp_id):]
+                entity_registry.async_update_entity(
+                    entity_entry.entity_id, new_unique_id=new_unique_id
+                )
+
+        self._remap_stored_device_data(old_pp_id, new_pp_id)
+
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            f"{ISSUE_DEVICE_REMAPPED_PREFIX}{new_pp_id}",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="device_remapped",
+            translation_placeholders={
+                "device_name": device_entry.name_by_user
+                or device_entry.name
+                or new_pp_id,
+                "serial_number": device_entry.serial_number or "?",
+            },
+        )
+
+    def _remap_stored_device_data(self, old_pp_id: str, new_pp_id: str) -> None:
+        """Rename references to old_pp_id to new_pp_id in config_entry.data.
+
+        Covers the two per-device data structures persisted there:
+        CONF_PAPER_IDS (device -> paper slot mapping) and
+        CONF_RANDOM_UPLOAD_HISTORY (per-device random rotation history).
+        Both are keyed directly by paperlesspaper device id at the top
+        level (see const.py for the exact structure).
+        """
+        new_data = dict(self.entry.data)
+        changed = False
+
+        paper_ids = dict(new_data.get(CONF_PAPER_IDS, {}))
+        if old_pp_id in paper_ids:
+            paper_ids[new_pp_id] = paper_ids.pop(old_pp_id)
+            new_data[CONF_PAPER_IDS] = paper_ids
+            changed = True
+
+        history = dict(new_data.get(CONF_RANDOM_UPLOAD_HISTORY, {}))
+        if old_pp_id in history:
+            history[new_pp_id] = history.pop(old_pp_id)
+            new_data[CONF_RANDOM_UPLOAD_HISTORY] = history
+            changed = True
+
+        if changed:
+            self.hass.config_entries.async_update_entry(self.entry, data=new_data)
+
+    # ------------------------------------------------------------------
+    # Manual remap support (for devices orphaned before this feature existed)
+    # ------------------------------------------------------------------
+
+    def async_candidate_devices_for_remap(self) -> dict[str, str]:
+        """Return currently unclaimed API devices as {pp_id: label}.
+
+        'Unclaimed' means: reported by the API in the latest poll, but not
+        currently linked to any HA device registry entry for this config
+        entry. These are the candidates a user can manually pick when
+        resolving an orphaned-device Repairs issue via the 'remap' option —
+        for devices that were already orphaned before this deviceId-based
+        automatic remap was introduced (no stored deviceId to match against
+        for those; see repairs.py CHANGE HISTORY).
+        """
+        device_registry = dr.async_get(self.hass)
+        claimed_ids = {
+            identifier
+            for device_entry in dr.async_entries_for_config_entry(
+                device_registry, self.entry.entry_id
+            )
+            for domain, identifier in device_entry.identifiers
+            if domain == DOMAIN
+        }
+        return {
+            device["id"]: (
+                f"{device.get('meta', {}).get('name') or device['id']} "
+                f"({device.get('deviceId', '?')})"
+            )
+            for device in (self.data or [])
+            if device["id"] not in claimed_ids
+        }
+
+    def async_manual_remap(self, ha_device_id: str, old_pp_id: str, new_pp_id: str) -> bool:
+        """Manually remap an orphaned device, triggered from a Repairs flow.
+
+        Used when a device was already orphaned before the automatic
+        deviceId-based remap was in place, so no stored deviceId was
+        available to match automatically. The user confirms the
+        correspondence manually via a device picker in repairs.py; this
+        method performs the same identifier/unique_id/config_entry.data
+        migration as the automatic path.
+
+        Returns False if the HA device entry no longer exists.
+        """
+        device_registry = dr.async_get(self.hass)
+        entity_registry = er.async_get(self.hass)
+        device_entry = device_registry.async_get(ha_device_id)
+        if device_entry is None:
+            return False
+        self._remap_device(device_entry, old_pp_id, new_pp_id, device_registry, entity_registry)
+        return True

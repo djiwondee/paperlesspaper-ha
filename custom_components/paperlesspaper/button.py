@@ -100,7 +100,7 @@ def _device_info(device: dict) -> DeviceInfo:
         manufacturer="paperlesspaper",
         model=device.get("kind", "epd"),
         sw_version=device.get("fw_version"),
-        serial_number=device.get("serial_number"),
+        serial_number=device.get("deviceId"),
     )
 
 

@@ -57,6 +57,38 @@
       "polling_interval_too_high": "Interval dotazování nesmí překročit 3600 sekund."
     }
   },
+  "issues": {
+    "orphaned_device": {
+      "title": "Zařízení již nebylo nalezeno v paperlesspaper",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Osiřelé zařízení: {device_name}",
+            "description": "Toto zařízení již nějakou dobu nebylo hlášeno z API paperlesspaper.",
+            "menu_options": {
+              "delete": "Odstranit toto zařízení",
+              "remap": "Jedná se vlastně o stejné fyzické zařízení — propojit znovu"
+            }
+          },
+          "delete": {
+            "title": "Odstranit osiřelé zařízení?",
+            "description": "Odstranit \"{device_name}\" a všechny jeho entity z Home Assistant? V aplikaci ani cloudu paperlesspaper se nic nezmění."
+          },
+          "remap": {
+            "title": "Propojit s jiným zařízením",
+            "description": "Vyberte níže zařízení, které je ve skutečnosti stejný fyzický rámeček (např. znovu zaregistrovaný v aplikaci paperlesspaper pod novým ID). Jeho entity_id, historie a přiřazení papíru budou přeneseny — nic se nezdvojí."
+          }
+        },
+        "abort": {
+          "no_candidates": "Pro zařízení \"{device_name}\" momentálně nejsou v API paperlesspaper hlášena žádná nezařazená zařízení, se kterými by šlo propojit. Zkuste to znovu později, až se náhradní zařízení objeví, nebo místo toho použijte \"Odstranit\"."
+        }
+      }
+    },
+    "device_remapped": {
+      "title": "Zařízení automaticky znovu propojeno",
+      "description": "Zařízení \"{device_name}\" bylo znovu zaregistrováno v aplikaci paperlesspaper a nyní se hlásí pod novým ID zařízení. Home Assistant jej rozpoznal podle hardwarového ID zařízení ({serial_number}) a automaticky znovu propojil stávající zařízení včetně všech entit — není potřeba žádná akce."
+    }
+  },
   "services": {
     "upload_image": {
       "name": "Nahrát obrázek",

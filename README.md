@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Validate](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml)
@@ -665,7 +665,11 @@ The integration polls the paperlesspaper API every 5 minutes (configurable). Eac
 
 During setup, all devices in the selected group are discovered automatically and added to Home Assistant. If new devices are added to the group in the paperlesspaper app at a later point, they are detected on the next poll cycle and their entities (sensors, binary sensors, buttons) are registered without requiring a restart.
 
-Devices that are removed from the paperlesspaper app are **not** automatically removed from Home Assistant. They remain visible but become **unavailable**. To remove them, delete them manually in Home Assistant under **Settings → Devices & Services → paperlesspaper → [device] → Delete**.
+Devices that disappear from the paperlesspaper app are handled automatically:
+
+- **Removed and re-registered** (e.g. after a factory reset or re-pairing): the integration recognizes the physical frame by its stable hardware id — shown as *Serial number* in the device info (e.g. `epd7-b43a459a7fe4`) — and re-links the existing Home Assistant device in place under the new id. Entity IDs, history, automations, and the paper assignment are all preserved; no duplicate device is created. A non-fixable notice ("Device automatically re-linked") appears once under **Settings → System → Repairs** to confirm this happened.
+- **Removed for good** (no matching device reappears): after a few consecutive missed poll cycles, a fixable Repairs issue ("Device no longer found in paperlesspaper") appears under **Settings → System → Repairs**. It offers two options: delete the device, or manually relink it to another currently-unlinked device — the manual option is useful for devices that were already orphaned *before* upgrading to this version, since automatic re-linking depends on the hardware id having been recorded while the device was still active.
+- Devices can also still be deleted directly under **Settings → Devices & Services → paperlesspaper → [device] → Delete**, but only once the API no longer reports them as active — this prevents accidentally deleting a device that is still in use, which would otherwise leave stale or duplicate entities behind.
 
 ### Papers
 
@@ -693,6 +697,7 @@ Each upload attempt outcome is reported via the `paperlesspaper_image_uploaded` 
 - Activity timeline entries for upload events are rendered in English regardless of the Home Assistant UI language
 - Outages of the paperlesspaper upload service longer than the retry budget (~50 seconds for uploads) will fail the current action; the next scheduled automation run will retry
 - **HEIC / HEIF images are not supported.** The paperlesspaper upload endpoint cannot process these formats and responds with HTTP 502. `upload_random_image` skips HEIC/HEIF files automatically when listing a folder, and the `upload_image` Media Picker does not offer them. If you have an Apple photo collection in `.heic`, convert it to JPEG (e.g. via a Home Assistant automation, a NAS tool, or macOS Photos export) before pointing the integration at the folder
+- **Automatic device re-linking after upgrading to v1.2.0**: devices that were already orphaned in Home Assistant *before* the upgrade will not be picked up by the automatic re-link (their hardware id was not yet recorded). Use the manual "relink" option in the device's Repairs issue instead — see [Device discovery](#device-discovery) above.
 
 ---
 

@@ -57,6 +57,38 @@
       "polling_interval_too_high": "Het polling-interval mag niet meer dan 3600 seconden zijn."
     }
   },
+  "issues": {
+    "orphaned_device": {
+      "title": "Apparaat niet meer gevonden in paperlesspaper",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Verweesd apparaat: {device_name}",
+            "description": "Dit apparaat is al een tijdje niet meer gemeld door de paperlesspaper API.",
+            "menu_options": {
+              "delete": "Dit apparaat verwijderen",
+              "remap": "Dit is eigenlijk hetzelfde fysieke apparaat — opnieuw koppelen"
+            }
+          },
+          "delete": {
+            "title": "Verweesd apparaat verwijderen?",
+            "description": "\"{device_name}\" en alle bijbehorende entiteiten uit Home Assistant verwijderen? Er verandert niets in de paperlesspaper-app of cloud."
+          },
+          "remap": {
+            "title": "Koppelen aan een ander apparaat",
+            "description": "Kies hieronder het apparaat dat eigenlijk hetzelfde fysieke scherm is (bijv. opnieuw geregistreerd in de paperlesspaper-app onder een nieuw ID). De entity_id's, geschiedenis en papertoewijzing worden overgenomen — niets wordt gedupliceerd."
+          }
+        },
+        "abort": {
+          "no_candidates": "Er worden momenteel geen niet-gekoppelde apparaten gerapporteerd door de paperlesspaper API om \"{device_name}\" aan te koppelen. Probeer het later opnieuw zodra het vervangende apparaat is verschenen, of gebruik in plaats daarvan \"Verwijderen\"."
+        }
+      }
+    },
+    "device_remapped": {
+      "title": "Apparaat automatisch opnieuw gekoppeld",
+      "description": "Het apparaat \"{device_name}\" is opnieuw geregistreerd in de paperlesspaper-app en meldt zich nu onder een nieuw apparaat-ID. Home Assistant herkende het aan zijn hardware-apparaat-ID ({serial_number}) en heeft het bestaande apparaat en alle bijbehorende entiteiten automatisch opnieuw gekoppeld — geen actie nodig."
+    }
+  },
   "services": {
     "upload_image": {
       "name": "Afbeelding uploaden",
