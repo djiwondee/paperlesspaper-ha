@@ -57,6 +57,38 @@
       "polling_interval_too_high": "Polling interval must not exceed 3600 seconds."
     }
   },
+  "issues": {
+    "orphaned_device": {
+      "title": "Device no longer found in paperlesspaper",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Orphaned device: {device_name}",
+            "description": "This device has not been reported by the paperlesspaper API for a while.",
+            "menu_options": {
+              "delete": "Delete this device",
+              "remap": "This is actually the same physical device — relink it"
+            }
+          },
+          "delete": {
+            "title": "Remove orphaned device?",
+            "description": "Remove \"{device_name}\" and all its entities from Home Assistant? Nothing changes in the paperlesspaper app or cloud."
+          },
+          "remap": {
+            "title": "Relink to another device",
+            "description": "Pick the device below that is actually this same physical frame (e.g. re-registered in the paperlesspaper app under a new id). Its entity_ids, history, and paper assignment will be transferred — nothing is duplicated."
+          }
+        },
+        "abort": {
+          "no_candidates": "No unclaimed devices are currently reported by the paperlesspaper API for \"{device_name}\" to relink to. Try again later once the replacement device has appeared, or use \"Delete\" instead."
+        }
+      }
+    },
+    "device_remapped": {
+      "title": "Device automatically re-linked",
+      "description": "The device \"{device_name}\" was re-registered in the paperlesspaper app and now reports under a new device id. Home Assistant recognized it by its hardware device id ({serial_number}) and automatically re-linked the existing device and all its entities — no action needed."
+    }
+  },
   "services": {
     "upload_image": {
       "name": "Upload image",

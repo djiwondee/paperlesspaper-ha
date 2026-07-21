@@ -57,6 +57,38 @@
       "polling_interval_too_high": "L'intervalle d'interrogation ne doit pas dépasser 3600 secondes."
     }
   },
+  "issues": {
+    "orphaned_device": {
+      "title": "Appareil introuvable dans paperlesspaper",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Appareil orphelin : {device_name}",
+            "description": "Cet appareil n'a plus été signalé par l'API paperlesspaper depuis un certain temps.",
+            "menu_options": {
+              "delete": "Supprimer cet appareil",
+              "remap": "C'est en fait le même appareil physique — le relier"
+            }
+          },
+          "delete": {
+            "title": "Supprimer l'appareil orphelin ?",
+            "description": "Supprimer « {device_name} » et toutes ses entités de Home Assistant ? Rien ne change dans l'application ou le cloud paperlesspaper."
+          },
+          "remap": {
+            "title": "Relier à un autre appareil",
+            "description": "Sélectionnez ci-dessous l'appareil qui est en réalité ce même écran physique (par exemple réenregistré dans l'application paperlesspaper sous un nouvel identifiant). Ses entity_id, son historique et son affectation de papier seront transférés — rien n'est dupliqué."
+          }
+        },
+        "abort": {
+          "no_candidates": "Aucun appareil non affecté n'est actuellement signalé par l'API paperlesspaper pour relier à « {device_name} ». Réessayez plus tard une fois que l'appareil de remplacement sera apparu, ou utilisez « Supprimer » à la place."
+        }
+      }
+    },
+    "device_remapped": {
+      "title": "Appareil relié automatiquement",
+      "description": "L'appareil « {device_name} » a été réenregistré dans l'application paperlesspaper et se signale désormais sous un nouvel identifiant d'appareil. Home Assistant l'a reconnu grâce à son identifiant matériel ({serial_number}) et a automatiquement relié l'appareil existant ainsi que toutes ses entités — aucune action requise."
+    }
+  },
   "services": {
     "upload_image": {
       "name": "Téléverser une image",

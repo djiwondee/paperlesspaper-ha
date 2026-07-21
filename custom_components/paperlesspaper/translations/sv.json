@@ -57,6 +57,38 @@
       "polling_interval_too_high": "Uppdateringsintervallet får inte överstiga 3600 sekunder."
     }
   },
+  "issues": {
+    "orphaned_device": {
+      "title": "Enheten hittades inte längre i paperlesspaper",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Övergiven enhet: {device_name}",
+            "description": "Den här enheten har inte rapporterats av paperlesspaper-API:et på ett tag.",
+            "menu_options": {
+              "delete": "Ta bort den här enheten",
+              "remap": "Det här är faktiskt samma fysiska enhet — länka om"
+            }
+          },
+          "delete": {
+            "title": "Ta bort övergiven enhet?",
+            "description": "Ta bort \"{device_name}\" och alla dess entiteter från Home Assistant? Inget ändras i paperlesspaper-appen eller molnet."
+          },
+          "remap": {
+            "title": "Länka om till en annan enhet",
+            "description": "Välj enheten nedan som faktiskt är samma fysiska skärm (t.ex. omregistrerad i paperlesspaper-appen med ett nytt ID). Dess entity_id, historik och pappersildelning överförs — inget dupliceras."
+          }
+        },
+        "abort": {
+          "no_candidates": "Inga otilldelade enheter rapporteras för närvarande av paperlesspaper-API:et att länka \"{device_name}\" till. Försök igen senare när ersättningsenheten har dykt upp, eller använd \"Ta bort\" istället."
+        }
+      }
+    },
+    "device_remapped": {
+      "title": "Enheten omlänkad automatiskt",
+      "description": "Enheten \"{device_name}\" registrerades på nytt i paperlesspaper-appen och rapporterar nu under ett nytt enhets-ID. Home Assistant kände igen den via dess maskinvaru-enhets-ID ({serial_number}) och länkade automatiskt om den befintliga enheten och alla dess entiteter — ingen åtgärd krävs."
+    }
+  },
   "services": {
     "upload_image": {
       "name": "Ladda upp bild",

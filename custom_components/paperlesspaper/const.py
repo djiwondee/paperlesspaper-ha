@@ -25,6 +25,17 @@
 #                      field in the event payload.
 #                    - DEVICE_STATE_* string constants for the known state
 #                      values documented by the API.
+# 2026-07-18  1.2.0  Added constants for orphaned-device detection (Repairs):
+#                    - ORPHANED_DEVICE_MISSING_THRESHOLD: consecutive poll
+#                      cycles a device may be missing from the API device
+#                      list before it is flagged via a Repairs issue.
+#                    - ISSUE_ORPHANED_DEVICE_PREFIX: issue id prefix used by
+#                      coordinator._reconcile_devices() and repairs.py.
+#                    - ISSUE_DEVICE_REMAPPED_PREFIX: informational
+#                      (non-fixable) Repairs issue raised whenever a device
+#                      is automatically remapped onto a new paperlesspaper
+#                      device id via hardware deviceId matching (see
+#                      coordinator._reconcile_devices() / _remap_device()).
 # =============================================================================
 
 DOMAIN = "paperlesspaper"
@@ -56,6 +67,26 @@ CONF_POLLING_INTERVAL = "polling_interval"
 DEFAULT_POLLING_INTERVAL = 300  # 5 minutes
 MIN_POLLING_INTERVAL = 60       # 1 minute minimum
 MAX_POLLING_INTERVAL = 3600     # 1 hour maximum
+
+# ----------------------------------------------------------------------------
+# Orphaned device detection (Repairs)
+# ----------------------------------------------------------------------------
+# Number of consecutive coordinator cycles a previously known device may be
+# missing from the API's device list before it is flagged as orphaned via a
+# Home Assistant Repairs issue. A small threshold avoids false positives from
+# a single transient API hiccup while still surfacing genuinely removed
+# devices reasonably quickly (threshold 3 at the default 300s poll interval
+# means roughly 15 minutes before the issue appears).
+ORPHANED_DEVICE_MISSING_THRESHOLD = 3
+
+# Repairs issue id prefix. The paperlesspaper device id (MongoDB ObjectId) is
+# appended to form a unique, stable issue id per orphaned device.
+ISSUE_ORPHANED_DEVICE_PREFIX = "orphaned_device_"
+
+# Informational issue raised after an automatic deviceId-based remap. Not
+# fixable — purely to inform the user in the UI; the action already happened
+# by the time the issue appears.
+ISSUE_DEVICE_REMAPPED_PREFIX = "remapped_device_"
 
 # ----------------------------------------------------------------------------
 # Upload event type & status values

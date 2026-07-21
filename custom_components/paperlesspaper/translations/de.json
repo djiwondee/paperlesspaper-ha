@@ -57,6 +57,38 @@
       "polling_interval_too_high": "Das Abfrageintervall kann 3600 Sekunden nicht überschreiten."
     }
   },
+  "issues": {
+    "orphaned_device": {
+      "title": "Gerät nicht mehr in paperlesspaper gefunden",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Verwaistes Gerät: {device_name}",
+            "description": "Dieses Gerät wurde seit einiger Zeit nicht mehr von der paperlesspaper API gemeldet.",
+            "menu_options": {
+              "delete": "Dieses Gerät löschen",
+              "remap": "Das ist eigentlich dasselbe physische Gerät — neu verknüpfen"
+            }
+          },
+          "delete": {
+            "title": "Verwaistes Gerät entfernen?",
+            "description": "\"{device_name}\" und alle zugehörigen Entitäten aus Home Assistant entfernen? In der paperlesspaper App oder Cloud ändert sich dadurch nichts."
+          },
+          "remap": {
+            "title": "Mit anderem Gerät verknüpfen",
+            "description": "Wähle unten das Gerät aus, das eigentlich derselbe physische Bilderrahmen ist (z. B. in der paperlesspaper App unter neuer ID neu registriert). Entity-IDs, Historie und Paper-Zuordnung werden übernommen — nichts wird dupliziert."
+          }
+        },
+        "abort": {
+          "no_candidates": "Für \"{device_name}\" werden aktuell keine nicht zugeordneten Geräte von der paperlesspaper API gemeldet, mit denen verknüpft werden könnte. Versuche es später erneut, sobald das Ersatzgerät erschienen ist, oder nutze stattdessen \"Löschen\"."
+        }
+      }
+    },
+    "device_remapped": {
+      "title": "Gerät automatisch neu verknüpft",
+      "description": "Das Gerät \"{device_name}\" wurde in der paperlesspaper App neu registriert und meldet sich nun unter einer neuen Geräte-ID. Home Assistant hat es anhand seiner Hardware-Geräte-ID ({serial_number}) erkannt und das bestehende Gerät samt aller Entitäten automatisch neu verknüpft — es ist keine Aktion nötig."
+    }
+  },
   "services": {
     "upload_image": {
       "name": "Bild hochladen",

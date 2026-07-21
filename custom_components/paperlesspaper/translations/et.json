@@ -57,6 +57,38 @@
       "polling_interval_too_high": "Küsitlusintervall ei tohi ületada 3600 sekundit."
     }
   },
+  "issues": {
+    "orphaned_device": {
+      "title": "Seadet ei leitud enam paperlesspaper rakendusest",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Orvuks jäänud seade: {device_name}",
+            "description": "Seda seadet pole mõnda aega paperlesspaper API kaudu teatatud.",
+            "menu_options": {
+              "delete": "Kustuta see seade",
+              "remap": "See on tegelikult sama füüsiline seade — ühenda uuesti"
+            }
+          },
+          "delete": {
+            "title": "Eemaldada orvuks jäänud seade?",
+            "description": "Eemaldada \"{device_name}\" ja kõik selle olemid Home Assistantist? paperlesspaper rakenduses ega pilves midagi ei muutu."
+          },
+          "remap": {
+            "title": "Ühenda teise seadmega",
+            "description": "Valige allolevast loendist seade, mis on tegelikult sama füüsiline seade (nt paperlesspaper rakenduses uue ID-ga uuesti registreeritud). Selle entity_id-d, ajalugu ja paberi määramine kantakse üle — midagi ei dubleerita."
+          }
+        },
+        "abort": {
+          "no_candidates": "Hetkel ei teata paperlesspaper API kaudu ühtegi sidumata seadet, millega \"{device_name}\" siduda. Proovige hiljem uuesti, kui asendusseade on ilmunud, või kasutage selle asemel \"Kustuta\"."
+        }
+      }
+    },
+    "device_remapped": {
+      "title": "Seade ühendati automaatselt uuesti",
+      "description": "Seade \"{device_name}\" registreeriti paperlesspaper rakenduses uuesti ja teatab nüüd uue seadme ID all. Home Assistant tuvastas selle riistvara seadme ID ({serial_number}) järgi ja ühendas olemasoleva seadme koos kõigi olemitega automaatselt uuesti — tegevust pole vaja."
+    }
+  },
   "services": {
     "upload_image": {
       "name": "Laadi pilt üles",
