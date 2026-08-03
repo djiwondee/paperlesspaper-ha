@@ -1,0 +1,19 @@
+docs: document automatic device re-linking and HACS default store listing (2.0.1)
+
+- README.md: added a dedicated "Automatic device re-linking" section
+  explaining the automatic and manual device re-link behavior (deviceId-
+  based hardware matching, the "Device automatically re-linked" one-time
+  notice, and the "Delete" / "Relink to another device" options on the
+  orphaned-device Repairs issue), replacing the shorter inline bullets
+  previously under "Device discovery". Updated the "Known limitations"
+  anchor link to point to the new section.
+- README.md: simplified the HACS installation instructions - the
+  integration is now listed in the official HACS default store, so the
+  "add as custom repository" step is no longer needed.
+- README.md: badges updated (HACS Default instead of HACS Custom;
+  version bumped to 2.0.1).
+- manifest.json: version bump to 2.0.1.
+
+The version jump from 1.2.0 to 2.0.1 reflects both the device re-link
+feature set (previously shipped as v1.2.0b1) and the integration's
+recent acceptance into the HACS default store (hacs/default#7803).

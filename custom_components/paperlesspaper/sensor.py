@@ -50,6 +50,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import ClassVar
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -113,9 +114,7 @@ async def async_setup_entry(
     )
 
 
-def _sensors_for_device(
-    coordinator: PaperlessCoordinator, device: dict
-) -> list:
+def _sensors_for_device(coordinator: PaperlessCoordinator, device: dict) -> list:
     """Return all sensor entities for a single device."""
     return [
         PaperlessBatLevelSensor(coordinator, device),
@@ -373,7 +372,7 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
     # Enabled by default — useful for diagnosing frame mounting issues
 
     # Map raw API integer → internal state string (used as translation key)
-    _ORIENTATION_MAP: dict[int, str] = {
+    _ORIENTATION_MAP: ClassVar[dict[int, str]] = {
         0: "portrait",
         3: "landscape",
     }
