@@ -9,7 +9,8 @@
 
 Control your [paperlesspaper](https://paperlesspaper.de) ePaper displays directly from Home Assistant — including automations, scripts, and the full HA media library.
 
-<img width="919" height="386" alt="image" src="https://github.com/user-attachments/assets/c5a34680-073d-4ee0-8f2b-51d3647d6df8" />
+<img width="941" height="409" alt="image" src="https://github.com/user-attachments/assets/e0c2ec2a-ea8f-49e3-a8d4-ae21df1b4b3e" />
+
 
 ---
 
