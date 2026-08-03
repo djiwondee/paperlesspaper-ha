@@ -51,7 +51,6 @@
 # =============================================================================
 
 """Config flow for paperlesspaper integration."""
-
 from __future__ import annotations
 
 # stdlib
@@ -98,9 +97,8 @@ _ORG_NAME_FALLBACKS = [
     "Wall Frames",
     "Frame Group",
     "Gallery Hub",
-    "Frame Fleet",
+    "Frame Fleet"
 ]
-
 
 def _resolve_org_name(org: dict) -> str:
     """Return the organization's name, or a random fallback if unset.
@@ -115,7 +113,6 @@ def _resolve_org_name(org: dict) -> str:
         name = random.choice(_ORG_NAME_FALLBACKS)
         org["name"] = name  # write back for consistency within the flow
     return name
-
 
 class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for paperlesspaper.
@@ -175,7 +172,9 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
     # Shared API key validation logic (used by both user & reconfigure)
     # ------------------------------------------------------------------
 
-    async def _async_step_api_key(self, step_id: str, user_input) -> ConfigFlowResult:
+    async def _async_step_api_key(
+        self, step_id: str, user_input
+    ) -> ConfigFlowResult:
         """Validate the API key and advance to organization selection."""
         errors: dict[str, str] = {}
 
@@ -219,11 +218,9 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id=step_id,
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_API_KEY, default=current_api_key): str,
-                }
-            ),
+            data_schema=vol.Schema({
+                vol.Required(CONF_API_KEY, default=current_api_key): str,
+            }),
             errors=errors,
         )
 
@@ -272,16 +269,12 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="organization",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_ORGANIZATION_ID,
-                        default=current_org_id
-                        if current_org_id in org_options
-                        else vol.UNDEFINED,
-                    ): vol.In(org_options),
-                }
-            ),
+            data_schema=vol.Schema({
+                vol.Required(
+                    CONF_ORGANIZATION_ID,
+                    default=current_org_id if current_org_id in org_options else vol.UNDEFINED,
+                ): vol.In(org_options),
+            }),
             errors=errors,
         )
 
@@ -309,7 +302,8 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
         # Build a plain text device list for the description placeholder.
         # Each device is shown as "• Device Name" on its own line.
         device_list = "\n".join(
-            f"• {d.get('meta', {}).get('name') or d['id']}" for d in self._devices
+            f"• {d.get('meta', {}).get('name') or d['id']}"
+            for d in self._devices
         )
 
         return self.async_show_form(
@@ -425,7 +419,9 @@ class PaperlessOptionsFlow(OptionsFlow):
                 if reset_requested and has_random_history:
                     # Import here to avoid a circular import — the coordinator
                     # lives in a sibling module and is accessed via hass.data.
-                    coordinator = self.hass.data[DOMAIN].get(self.config_entry.entry_id)
+                    coordinator = self.hass.data[DOMAIN].get(
+                        self.config_entry.entry_id
+                    )
                     if coordinator is not None:
                         coordinator.reset_all_random_history()
 
@@ -443,7 +439,9 @@ class PaperlessOptionsFlow(OptionsFlow):
             ): int,
         }
         if has_random_history:
-            schema_fields[vol.Optional(_OPT_RESET_RANDOM_HISTORY, default=False)] = bool
+            schema_fields[
+                vol.Optional(_OPT_RESET_RANDOM_HISTORY, default=False)
+            ] = bool
 
         return self.async_show_form(
             step_id="init",

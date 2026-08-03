@@ -119,6 +119,7 @@
 #                    device.get("deviceId"), which is present on every device
 #                    and — per user-confirmed API testing — stable across
 #                    re-registration in the paperlesspaper app.
+# 2026-08-03  2.0.1  Preparation for new release
 # =============================================================================
 
 from __future__ import annotations

@@ -25,6 +25,7 @@ Covered events:
 #                    - EVENT_DEVICE_STATE_CHANGED: shows the state string
 #                      (update_ok, download_ok, update_failed, …) with a
 #                      human-readable prefix label.
+# 2026-08-03  2.0.1  Preparation for new release
 # =============================================================================
 
 from __future__ import annotations

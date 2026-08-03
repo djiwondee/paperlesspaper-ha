@@ -95,6 +95,7 @@
 #                    coordinator refresh). Complements the automatic
 #                    Repairs-based orphan detection and deviceId-based remap
 #                    in coordinator._reconcile_devices().
+# 2026-08-03  2.0.1  Preparation for new release
 # =============================================================================
 
 from __future__ import annotations

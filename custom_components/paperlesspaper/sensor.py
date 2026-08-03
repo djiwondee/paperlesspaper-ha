@@ -114,7 +114,9 @@ async def async_setup_entry(
     )
 
 
-def _sensors_for_device(coordinator: PaperlessCoordinator, device: dict) -> list:
+def _sensors_for_device(
+    coordinator: PaperlessCoordinator, device: dict
+) -> list:
     """Return all sensor entities for a single device."""
     return [
         PaperlessBatLevelSensor(coordinator, device),
