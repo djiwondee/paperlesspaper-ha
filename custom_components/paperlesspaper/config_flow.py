@@ -58,12 +58,12 @@ import random
 
 # third party
 import aiohttp
-import voluptuous as vol
 
 # HA / local
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import voluptuous as vol
 
 from .const import (
     API_BASE_URL,

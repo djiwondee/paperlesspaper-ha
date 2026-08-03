@@ -35,8 +35,8 @@ Covered events:
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
+import logging
 
 from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
 from homeassistant.core import Event, HomeAssistant, callback
