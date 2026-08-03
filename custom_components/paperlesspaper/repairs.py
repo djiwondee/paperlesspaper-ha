@@ -32,6 +32,13 @@ The user is offered two options:
 #                    message; the issue stays open so the user can retry
 #                    later or use "Delete" instead.
 # 2026-08-03  2.0.1  Preparation for new release
+#                    Fixed Ruff I001 import-order violation: the repository
+#                    has no known-first-party setting for "homeassistant" in
+#                    its Ruff config, so "homeassistant.*" imports are sorted
+#                    together with the third-party "voluptuous" import as a
+#                    single block (no blank line between them). Removed the
+#                    blank line that previously separated them. No functional
+#                    change.
 # =============================================================================
 
 from __future__ import annotations

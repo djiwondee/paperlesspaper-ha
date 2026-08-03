@@ -125,7 +125,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 import json
 import logging
 import time
@@ -484,7 +484,7 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         if ms_timestamp is None:
             return None
         try:
-            return datetime.fromtimestamp(ms_timestamp / 1000, tz=timezone.utc)  # noqa: UP017
+            return datetime.fromtimestamp(ms_timestamp / 1000, tz=UTC)
         except (ValueError, OSError):
             return None
 
@@ -682,9 +682,9 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         # to match the API's second-granular comparison. Using millisecond
         # precision causes the same event to reappear on subsequent polls
         # because the API's DateStart filter is inclusive at second granularity.
-        since_dt = datetime.fromtimestamp(since_ts_ms / 1000, tz=timezone.utc)  # noqa: UP017
+        since_dt = datetime.fromtimestamp(since_ts_ms / 1000, tz=UTC)
         since_iso = since_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-        now_iso = datetime.fromtimestamp(time.time(), tz=timezone.utc).strftime(  # noqa: UP017
+        now_iso = datetime.fromtimestamp(time.time(), tz=UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
 

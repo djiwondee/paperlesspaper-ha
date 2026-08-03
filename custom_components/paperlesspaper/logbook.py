@@ -26,12 +26,17 @@ Covered events:
 #                      (update_ok, download_ok, update_failed, …) with a
 #                      human-readable prefix label.
 # 2026-08-03  2.0.1  Preparation for new release
+# 2026-08-03  2.0.1  Fixed Ruff I001 import-order violation: within the
+#                    stdlib import block, straight "import x" statements
+#                    must precede "from x import y" statements. Swapped
+#                    "import logging" above "from collections.abc import
+#                    Callable" (no functional change).
 # =============================================================================
 
 from __future__ import annotations
 
-from collections.abc import Callable
 import logging
+from collections.abc import Callable
 
 from homeassistant.components.logbook import LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
 from homeassistant.core import Event, HomeAssistant, callback
