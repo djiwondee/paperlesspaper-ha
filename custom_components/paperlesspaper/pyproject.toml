@@ -1,0 +1,47 @@
+# =============================================================================
+# pyproject.toml — Ruff configuration for the paperlesspaper integration
+# -----------------------------------------------------------------------------
+# This file lives inside custom_components/paperlesspaper/ (NOT the repo
+# root) so that it travels with the integration folder through
+# sync_from_release.sh / sync_to_release.sh and is picked up by Ruff
+# wherever this folder is checked — inside the ha-core dev container, the
+# paperlesspaper-ha release repo, and the GitHub Actions "Lint" workflow.
+#
+# Ruff discovers configuration by walking UP the directory tree from the
+# target path and uses the first pyproject.toml / ruff.toml it finds. Since
+# this file sits directly in the target directory, it is always found
+# before any outer configuration — in particular before ha-core's own
+# pyproject.toml, which sets known-first-party = ["homeassistant"] and
+# would otherwise produce a different import order locally than what the
+# GitHub Actions CI check enforces.
+#
+# These isort settings intentionally match Ruff's built-in defaults (the
+# behaviour that was already in effect with no config file present, and
+# that the CI check currently enforces) rather than ha-core's own
+# convention: from this repository's point of view "homeassistant" is a
+# third-party dependency (installed via pip), not first-party code, so it
+# is intentionally NOT listed under known-first-party.
+#
+# target-version is pinned to py313 rather than py314: Ruff has a known bug
+# (introduced in 0.15.0, see astral-sh/ruff#24041) where `ruff format` with
+# target-version = "py314" rewrites valid multi-exception `except (A, B):`
+# clauses into invalid Python 2 comma syntax. py313 avoids this risk while
+# still reflecting a realistic minimum for current Home Assistant versions.
+# This only affects which syntax Ruff considers "safe to suggest" — it does
+# not restrict what Python version the integration actually runs on.
+#
+# CHANGE HISTORY
+# 2026-08-03  2.0.1  New file. Pins isort behaviour explicitly so local
+#                    checks (ha-core dev container) and GitHub Actions CI
+#                    always agree, and to stop local Ruff/VS Code quickfixes
+#                    from applying ha-core's known-first-party convention to
+#                    this repository's own code. Also pins target-version.
+# =============================================================================
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+combine-as-imports = true
+split-on-trailing-comma = false

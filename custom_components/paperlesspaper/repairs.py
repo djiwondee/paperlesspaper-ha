@@ -31,6 +31,7 @@ The user is offered two options:
 #                    Now aborts clearly with a translated "no_candidates"
 #                    message; the issue stays open so the user can retry
 #                    later or use "Delete" instead.
+# 2026-08-03  2.0.1  Preparation for new release
 # =============================================================================
 
 from __future__ import annotations

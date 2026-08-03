@@ -50,6 +50,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import ClassVar
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -373,7 +374,7 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
     # Enabled by default — useful for diagnosing frame mounting issues
 
     # Map raw API integer → internal state string (used as translation key)
-    _ORIENTATION_MAP: dict[int, str] = {
+    _ORIENTATION_MAP: ClassVar[dict[int, str]] = {
         0: "portrait",
         3: "landscape",
     }

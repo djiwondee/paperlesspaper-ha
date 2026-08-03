@@ -110,7 +110,7 @@ def _resolve_org_name(org: dict) -> str:
     """
     name = org.get("name") or ""
     if not name.strip():
-        name = random.choice(_ORG_NAME_FALLBACKS)  # noqa: S311 — not security-sensitive
+        name = random.choice(_ORG_NAME_FALLBACKS)
         org["name"] = name  # write back for consistency within the flow
     return name
 

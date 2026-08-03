@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-blue.svg)](https://github.com/hacs/default)
+[![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Validate](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml)
@@ -51,12 +51,12 @@ Before installing this integration you need:
 
 ### Via HACS (recommended)
 
+This integration is listed directly in the **HACS default store** — no need to add it as a custom repository anymore.
+
 1. Open HACS in Home Assistant
 2. Go to **Integrations**
-3. Click the three-dot menu → **Custom repositories**
-4. Add `https://github.com/djiwondee/paperlesspaper-ha` as an **Integration**
-5. Search for **paperlesspaper** and install it
-6. Restart Home Assistant
+3. Search for **paperlesspaper** and install it
+4. Restart Home Assistant
 
 ### Manual
 
@@ -665,11 +665,15 @@ The integration polls the paperlesspaper API every 5 minutes (configurable). Eac
 
 During setup, all devices in the selected group are discovered automatically and added to Home Assistant. If new devices are added to the group in the paperlesspaper app at a later point, they are detected on the next poll cycle and their entities (sensors, binary sensors, buttons) are registered without requiring a restart.
 
-Devices that disappear from the paperlesspaper app are handled automatically:
+### Automatic device re-linking
 
-- **Removed and re-registered** (e.g. after a factory reset or re-pairing): the integration recognizes the physical frame by its stable hardware id — shown as *Serial number* in the device info (e.g. `epd7-b43a459a7fe4`) — and re-links the existing Home Assistant device in place under the new id. Entity IDs, history, automations, and the paper assignment are all preserved; no duplicate device is created. A non-fixable notice ("Device automatically re-linked") appears once under **Settings → System → Repairs** to confirm this happened.
-- **Removed for good** (no matching device reappears): after a few consecutive missed poll cycles, a fixable Repairs issue ("Device no longer found in paperlesspaper") appears under **Settings → System → Repairs**. It offers two options: delete the device, or manually relink it to another currently-unlinked device — the manual option is useful for devices that were already orphaned *before* upgrading to this version, since automatic re-linking depends on the hardware id having been recorded while the device was still active.
-- Devices can also still be deleted directly under **Settings → Devices & Services → paperlesspaper → [device] → Delete**, but only once the API no longer reports them as active — this prevents accidentally deleting a device that is still in use, which would otherwise leave stale or duplicate entities behind.
+ePaper displays sometimes need to be re-registered in the paperlesspaper app — most commonly after the battery has run flat: the device forgets its WiFi credentials and has to be set up again in the app. Re-registering assigns the physical frame a brand-new internal id in the paperlesspaper cloud, even though it is the exact same piece of hardware.
+
+Without any special handling, this would leave Home Assistant with an orphaned, unavailable device and create a duplicate with fresh entity IDs for the "new" registration — breaking history, automations, and dashboard cards that reference the old entity IDs. The integration avoids this in two ways:
+
+- **Automatic re-link.** Every device has a stable hardware id (shown as *Serial number* in the device info, e.g. `epd7-b43a459a7fe4`) that survives re-registration. When a device disappears from the paperlesspaper API and a device with the **same** hardware id reappears under a new internal id, the integration re-links the existing Home Assistant device in place onto the new id. Entity IDs, history, automations, and the paper assignment are all preserved — nothing is duplicated. A one-time, informational notice ("Device automatically re-linked") appears once under **Settings → System → Repairs** to confirm this happened. It requires no action and clears itself the next time Home Assistant restarts.
+- **Manual re-link.** If a device was already orphaned in Home Assistant *before* upgrading to a version with this feature, its hardware id was never recorded, so there is nothing for the automatic match to compare against. In that case, after a few consecutive missed poll cycles a fixable Repairs issue ("Device no longer found in paperlesspaper") appears instead, offering a **"Relink to another device"** option: pick the newly re-registered device from a list of currently-unlinked devices, and the same in-place migration (entity IDs, history, paper assignment) happens as with the automatic path. This is a one-time step per affected device — once the hardware id has been recorded, future re-registrations of that same device are handled automatically.
+- **Delete.** The same Repairs issue also offers to simply delete the device, for cases where it was genuinely removed for good rather than re-registered elsewhere. Devices can also be deleted directly under **Settings → Devices & Services → paperlesspaper → [device] → Delete**, but only once the API no longer reports them as active — this prevents accidentally deleting a device that is still in use, which would otherwise leave stale or duplicate entities behind.
 
 ### Papers
 
@@ -697,7 +701,7 @@ Each upload attempt outcome is reported via the `paperlesspaper_image_uploaded` 
 - Activity timeline entries for upload events are rendered in English regardless of the Home Assistant UI language
 - Outages of the paperlesspaper upload service longer than the retry budget (~50 seconds for uploads) will fail the current action; the next scheduled automation run will retry
 - **HEIC / HEIF images are not supported.** The paperlesspaper upload endpoint cannot process these formats and responds with HTTP 502. `upload_random_image` skips HEIC/HEIF files automatically when listing a folder, and the `upload_image` Media Picker does not offer them. If you have an Apple photo collection in `.heic`, convert it to JPEG (e.g. via a Home Assistant automation, a NAS tool, or macOS Photos export) before pointing the integration at the folder
-- **Automatic device re-linking after upgrading to v1.2.0**: devices that were already orphaned in Home Assistant *before* the upgrade will not be picked up by the automatic re-link (their hardware id was not yet recorded). Use the manual "relink" option in the device's Repairs issue instead — see [Device discovery](#device-discovery) above.
+- **Automatic device re-linking after upgrading to a version with this feature (v1.2.0+)**: devices that were already orphaned in Home Assistant *before* the upgrade will not be picked up by the automatic re-link (their hardware id was not yet recorded). Use the manual "relink" option in the device's Repairs issue instead — see [Automatic device re-linking](#automatic-device-re-linking) above.
 
 ---
 

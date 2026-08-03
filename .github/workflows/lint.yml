@@ -4,8 +4,8 @@
 # Runs Ruff linter on every push and PR to enforce code style consistency.
 #
 # Checks the full custom_components/paperlesspaper/ directory.
-# Ruff configuration is read from pyproject.toml or ruff.toml if present;
-# otherwise Ruff defaults apply.
+# Ruff configuration is read from custom_components/paperlesspaper/pyproject.toml
+# (isort behaviour + target-version pinned there); otherwise Ruff defaults apply.
 #
 # Triggers:
 #   push              — every branch push
@@ -15,19 +15,25 @@
 # CHANGE HISTORY
 # 2026-05-18  1.0.1  Initial CI setup.
 #                    Pinned actions/checkout to v4.2.2 (Node.js 24 compatible).
+# 2026-08-03  2.0.1  Pinned Ruff to a fixed version (0.15.1) instead of
+#                    "latest" so a future Ruff release can't silently change
+#                    lint/isort behaviour and break this check without a
+#                    corresponding code change. Bumped python-version from
+#                    3.12 to 3.14 to match the minimum Home Assistant
+#                    version now required by this integration (HA Core
+#                    switched to Python 3.14 as of the 2026.3 release).
+#                    Note: this Python version is only for the runner that
+#                    executes Ruff itself — it does not affect the syntax
+#                    Ruff checks for, which is controlled separately by
+#                    target-version in pyproject.toml.
 # =============================================================================
-
 name: Lint
-
 on:
   push:
   pull_request:
   workflow_dispatch:
-
 permissions: {}
-
 jobs:
-
   # ---------------------------------------------------------------------------
   # Ruff: fast Python linter — covers style, imports, and common errors.
   # ---------------------------------------------------------------------------
@@ -37,14 +43,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
-
+          python-version: "3.14"
       - name: Install Ruff
-        run: pip install ruff
-
+        run: pip install ruff==0.15.1
       - name: Run Ruff
         run: ruff check custom_components/paperlesspaper/

@@ -14,6 +14,7 @@
 #                    entry at once. A per-device button implied device-level
 #                    scope which was misleading given the shared history
 #                    structure.
+# 2026-08-03  2.0.1  Preparation for new release
 # =============================================================================
 
 from __future__ import annotations
