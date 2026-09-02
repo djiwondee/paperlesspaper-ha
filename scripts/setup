@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Runs once when the devcontainer is created.
+set -e
+
+# Optional runtime libs some HA-onboarding default integrations expect
+# (camera snapshot support, tts). Not required for this project's own
+# integration, but avoids noisy (harmless) startup errors from HA's
+# automatically-added onboarding entries (Met weather, Google Translate TTS).
+sudo apt-get update -qq
+sudo apt-get install -y --no-install-recommends ffmpeg libturbojpeg0 > /dev/null
+
+python3 -m pip install --upgrade pip
+pip install homeassistant
+pip install -r requirements_test.txt 2>/dev/null || true
+
+mkdir -p config
+if [ ! -f config/configuration.yaml ]; then
+  cat > config/configuration.yaml <<'YAML'
+# Deliberately NOT using `default_config:` - it pulls in the full camera /
+# streaming stack (go2rtc, libturbojpeg) which this project doesn't need and
+# which isn't available in the dev container, causing noisy (harmless) log
+# errors on startup. This is the minimal set actually required for the
+# config flow UI and this integration to work.
+frontend:
+config:
+http:
+lovelace:
+person:
+system_health:
+
+logger:
+  default: info
+  logs:
+    custom_components.paperlesspaper: debug
+YAML
+fi
+
+echo "Setup complete. Run 'scripts/develop' to start Home Assistant."
