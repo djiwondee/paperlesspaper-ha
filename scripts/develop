@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Starts Home Assistant Core with this repo's custom_components mounted,
+# so changes are picked up live (restart HA to reload, no reinstall needed).
+set -e
+
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/custom_components"
+mkdir -p config/custom_components
+ln -sfn "$(pwd)/custom_components/paperlesspaper" \
+        config/custom_components/paperlesspaper
+
+hass --config config --debug
