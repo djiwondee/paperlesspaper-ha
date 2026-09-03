@@ -10,8 +10,8 @@ sudo rm -f /etc/apt/sources.list.d/yarn.list
 
 # Optional runtime libs some HA-onboarding default integrations expect
 # (camera snapshot support, tts). Not required for this project's own
-# integration, but avoids noisy (harmless) startup errors from HA's
-# automatically-added onboarding entries (Met weather, Google Translate TTS).
+# integration, but avoids startup errors from HA's automatically-added
+# onboarding entries (Met weather, Google Translate TTS).
 sudo apt-get update -qq
 sudo apt-get install -y --no-install-recommends ffmpeg libturbojpeg0 > /dev/null
 
@@ -19,14 +19,74 @@ python3 -m pip install --upgrade pip
 pip install homeassistant
 pip install -r requirements_test.txt 2>/dev/null || true
 
+# Two known gaps in a bare `pip install homeassistant` (no default_config:,
+# deliberately - see below), both fixed the same way: walk the manifest.json
+# dependency graph HA itself would resolve for a domain, and pip install the
+# collected requirements up front instead of relying on HA's own dynamic
+# per-component installer, which either never runs (1) or races (2):
+#
+# 1. homeassistant.helpers.service._base_components() unconditionally
+#    imports a fixed list of "base" entity-platform domains (camera,
+#    assist_satellite, ai_task, ...) on every `get_services` websocket call,
+#    regardless of configuration.yaml. Since none of them are ever actually
+#    set up, their pinned requirements never get installed, so the bare
+#    import throws ModuleNotFoundError - which doesn't just log noise, it
+#    makes get_services error out entirely, hiding every service (including
+#    this integration's own) from Developer Tools > Actions.
+# 2. `frontend:` (which we do configure) installs its own requirement
+#    (home-assistant-frontend) dynamically at startup, but HA attempts the
+#    `import hass_frontend` before that install finishes on a cold start,
+#    permanently failing frontend setup for that run (recovery mode) even
+#    though a second start - package now on disk - works fine. Pre-install
+#    it so the very first start doesn't hit the race.
+python3 - <<'PYEOF'
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import homeassistant.components as components
+
+SEED_DOMAINS = [
+    "frontend",
+    "ai_task", "alarm_control_panel", "assist_satellite", "calendar",
+    "camera", "climate", "cover", "fan", "humidifier", "light", "lock",
+    "media_player", "notify", "remote", "siren", "todo", "update",
+    "vacuum", "water_heater",
+]
+
+base = Path(components.__path__[0])
+seen: set[str] = set()
+reqs: set[str] = set()
+queue = list(SEED_DOMAINS)
+while queue:
+    domain = queue.pop()
+    if domain in seen:
+        continue
+    seen.add(domain)
+    manifest = base / domain / "manifest.json"
+    if not manifest.exists():
+        continue
+    data = json.loads(manifest.read_text())
+    reqs.update(data.get("requirements") or [])
+    queue.extend(data.get("dependencies") or [])
+    queue.extend(data.get("after_dependencies") or [])
+
+if reqs:
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", "--quiet", *sorted(reqs)]
+    )
+PYEOF
+
 mkdir -p config
 if [ ! -f config/configuration.yaml ]; then
   cat > config/configuration.yaml <<'YAML'
-# Deliberately NOT using `default_config:` - it pulls in the full camera /
-# streaming stack (go2rtc, libturbojpeg) which this project doesn't need and
-# which isn't available in the dev container, causing noisy (harmless) log
-# errors on startup. This is the minimal set actually required for the
-# config flow UI and this integration to work.
+# Deliberately NOT using `default_config:` - on a bare `pip install
+# homeassistant` it's actually broken (missing hass_frontend and numpy,
+# breaks the frontend into recovery mode) and pulls in the full camera/
+# streaming stack this project doesn't need. This is the minimal set
+# actually required for the config flow UI and this integration to work;
+# see scripts/setup for how get_services still works without it.
 frontend:
 config:
 http:
