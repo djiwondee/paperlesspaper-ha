@@ -2,6 +2,12 @@
 # Runs once when the devcontainer is created.
 set -e
 
+# The base image ships a yarn.list apt source whose keyring doesn't match
+# the key the repo currently signs with (NO_PUBKEY), which fails `apt-get
+# update` outright under `set -e`. This project needs neither yarn nor
+# node, so drop that source rather than working around the error.
+sudo rm -f /etc/apt/sources.list.d/yarn.list
+
 # Optional runtime libs some HA-onboarding default integrations expect
 # (camera snapshot support, tts). Not required for this project's own
 # integration, but avoids noisy (harmless) startup errors from HA's
