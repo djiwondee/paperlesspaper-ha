@@ -118,6 +118,15 @@ system_health:
 # upload_random_image expects - browses config/media by default. No extra
 # pip requirements (integration_type: system), safe to always include.
 media_source:
+# Powers the Logbook sidebar panel and an entity's Activity timeline -
+# this integration's own logbook.py describe-event hooks (e.g. for
+# paperlesspaper_image_uploaded) are inert without it. Depends on
+# recorder:, set up automatically; history: is the companion History
+# graph tab. Neither has its own pip requirements beyond what recorder
+# needs (SQLAlchemy, fnv-hash-fast, psutil-home-assistant), all already
+# part of the base homeassistant package's own requirements.
+logbook:
+history:
 
 logger:
   default: info
