@@ -79,6 +79,12 @@ if reqs:
 PYEOF
 
 mkdir -p config
+# HA's built-in local media source browses this directory by default
+# (media-source://media_source/local/...) - this integration's own
+# upload_image/upload_random_image actions select images from it via
+# HA's native media selector, so it needs to exist even though it starts
+# empty. Drop test images here (e.g. via the VS Code file explorer).
+mkdir -p config/media
 if [ ! -f config/configuration.yaml ]; then
   cat > config/configuration.yaml <<'YAML'
 # Deliberately NOT using `default_config:` - on a bare `pip install
@@ -93,6 +99,10 @@ http:
 lovelace:
 person:
 system_health:
+# Backs the media selector on upload_image and the media-source:// URIs
+# upload_random_image expects - browses config/media by default. No extra
+# pip requirements (integration_type: system), safe to always include.
+media_source:
 
 logger:
   default: info
