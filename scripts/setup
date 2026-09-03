@@ -85,8 +85,15 @@ mkdir -p config
 # HA's native media selector, so it needs to exist even though it starts
 # empty. Drop test images here (e.g. via the VS Code file explorer).
 mkdir -p config/media
-if [ ! -f config/configuration.yaml ]; then
-  cat > config/configuration.yaml <<'YAML'
+
+# Always overwrite, never guard on file-exists: config/ is gitignored and
+# persists on the host across "Rebuild Container" (only postCreateCommand
+# re-runs, the bind-mounted workspace doesn't reset), so a guard here would
+# mean any future change to this template silently never reaches a
+# devcontainer that was ever set up before that change - which is exactly
+# what happened when media_source: was added but existing checkouts kept
+# their old pre-media_source configuration.yaml forever.
+cat > config/configuration.yaml <<'YAML'
 # Deliberately NOT using `default_config:` - on a bare `pip install
 # homeassistant` it's actually broken (missing hass_frontend and numpy,
 # breaks the frontend into recovery mode) and pulls in the full camera/
@@ -109,6 +116,5 @@ logger:
   logs:
     custom_components.paperlesspaper: debug
 YAML
-fi
 
 echo "Setup complete. Run 'scripts/develop' to start Home Assistant."
