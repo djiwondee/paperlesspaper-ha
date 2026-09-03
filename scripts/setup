@@ -86,6 +86,14 @@ mkdir -p config
 # empty. Drop test images here (e.g. via the VS Code file explorer).
 mkdir -p config/media
 
+# HA detects it's running in a container (is_docker_env()) and defaults
+# media_dirs["local"] to the absolute path /media instead of config/media -
+# but that directory is root:root in this base image, while HA itself runs
+# as the vscode user (remoteUser in devcontainer.json), so uploading a file
+# through the media picker fails with "Permission denied: '/media/...'".
+# Hand it to vscode so uploads (and browsing) work.
+sudo chown -R vscode:vscode /media
+
 # Always overwrite, never guard on file-exists: config/ is gitignored and
 # persists on the host across "Rebuild Container" (only postCreateCommand
 # re-runs, the bind-mounted workspace doesn't reset), so a guard here would
