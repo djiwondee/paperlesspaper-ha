@@ -1,0 +1,23 @@
+# Only custom_components/paperlesspaper/*, README.md, hacs.json, LICENSE
+# are included in GitHub release source archives (git archive / GitHub
+# Release "Source code" zip & tar.gz). Everything else is dev-only tooling
+# and explicitly excluded via export-ignore.
+
+# Repo/dev metadata
+.devcontainer/ export-ignore
+.github/ export-ignore
+.vscode/ export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+CLAUDE.md export-ignore
+
+# Dev workflow / tooling
+scripts/ export-ignore
+docker-compose.yml export-ignore
+requirements_test.txt export-ignore
+
+# Legacy / non-shipped assets
+brands/ export-ignore
+
+# Dev-only lint config inside the integration folder (not needed at runtime)
+custom_components/paperlesspaper/pyproject.toml export-ignore
