@@ -96,6 +96,18 @@
 #                    Repairs-based orphan detection and deviceId-based remap
 #                    in coordinator._reconcile_devices().
 # 2026-08-03  2.0.1  Preparation for new release
+# 2026-09-03  2.1.0  Fixes GitHub issue #35 (itchensen): fetch-stage failures
+#                    in upload_image/upload_random_image (media resolution,
+#                    local file read, HTTP fetch) previously discarded which
+#                    file/URL caused them and never fired EVENT_IMAGE_UPLOADED
+#                    - the only upload-failure path that didn't show up on the
+#                    Activity timeline or as an automation trigger, since
+#                    _fire_upload_event was only ever called from within
+#                    _upload_to_api. _fetch_media_source and _fetch_http now
+#                    include the failing media_content_id/URL in both the
+#                    logged error and the raised HomeAssistantError message,
+#                    and both service handlers now fire a status: failed event
+#                    (image_uri = the failing file) before re-raising.
 # =============================================================================
 
 from __future__ import annotations
@@ -382,20 +394,37 @@ async def _async_handle_upload_image(hass: HomeAssistant, call: ServiceCall) -> 
     # Fetch image bytes
     session = async_get_clientsession(hass)
 
-    if media_content_id.startswith("media-source://"):
-        image_data, content_type = await _fetch_media_source(
-            hass, session, media_content_id
-        )
-    elif media_content_id.startswith("http"):
-        image_data, content_type = await _fetch_http(session, media_content_id)
-    else:
-        raise HomeAssistantError(
-            f"Unsupported media_content_id format: {media_content_id}. "
-            "Use media-source://... or http://..."
-        )
+    try:
+        if media_content_id.startswith("media-source://"):
+            image_data, content_type = await _fetch_media_source(
+                hass, session, media_content_id
+            )
+        elif media_content_id.startswith("http"):
+            image_data, content_type = await _fetch_http(session, media_content_id)
+        else:
+            raise HomeAssistantError(
+                f"Unsupported media_content_id format: {media_content_id}. "
+                "Use media-source://... or http://..."
+            )
 
-    if not image_data:
-        raise HomeAssistantError("No image data received")
+        if not image_data:
+            raise HomeAssistantError("No image data received")
+    except HomeAssistantError as err:
+        # Fetch-stage failures happen before _upload_to_api is ever reached,
+        # so without this they'd be the only upload-failure mode that never
+        # fires EVENT_IMAGE_UPLOADED / shows up on the Activity timeline.
+        _fire_upload_event(
+            hass,
+            ha_device_id=ha_device_id,
+            pp_device_id=pp_device_id,
+            paper_id=paper_id,
+            status=UPLOAD_STATUS_FAILED,
+            image_uri=media_content_id,
+            action="upload_image",
+            attempt=1,
+            error=str(err),
+        )
+        raise
 
     await _upload_to_api(
         hass, session, coordinator, paper_id, pp_device_id, ha_device_id,
@@ -578,9 +607,29 @@ async def _async_handle_upload_random_image(
 
         # ---------- 8. Fetch image bytes ---------------------------------
         session = async_get_clientsession(hass)
-        image_data, content_type = await _fetch_media_source(hass, session, chosen_uri)
-        if not image_data:
-            raise HomeAssistantError(f"No image data received for {chosen_uri}")
+        try:
+            image_data, content_type = await _fetch_media_source(
+                hass, session, chosen_uri
+            )
+            if not image_data:
+                raise HomeAssistantError(f"No image data received for {chosen_uri}")
+        except HomeAssistantError as err:
+            # Fetch-stage failures happen before _upload_to_api is ever
+            # reached, so without this a single bad file in a large
+            # directory would silently vanish - no Activity-timeline entry
+            # and no automation trigger to identify which file failed.
+            _fire_upload_event(
+                hass,
+                ha_device_id=ha_device_id,
+                pp_device_id=pp_device_id,
+                paper_id=paper_id,
+                status=UPLOAD_STATUS_FAILED,
+                image_uri=chosen_uri,
+                action="upload_random_image",
+                attempt=1,
+                error=str(err),
+            )
+            raise
 
         # ---------- 9. Upload --------------------------------------------
         await _upload_to_api(
@@ -671,7 +720,10 @@ async def _fetch_media_source(
         media = await async_resolve_media(hass, media_content_id, None)
         media_url = media.url
     except Exception as err:
-        raise HomeAssistantError(f"Could not resolve media source: {err}") from err
+        _LOGGER.error("Failed to resolve media source %s: %s", media_content_id, err)
+        raise HomeAssistantError(
+            f"Could not resolve media source '{media_content_id}': {err}"
+        ) from err
 
     _LOGGER.debug("Resolved media URL: %s", media_url)
 
@@ -683,7 +735,10 @@ async def _fetch_media_source(
             async with aiofiles.open(media_url, "rb") as f:
                 image_data = await f.read()
         except OSError as err:
-            raise HomeAssistantError(f"Could not read image file: {err}") from err
+            _LOGGER.error("Failed to read image file %s: %s", media_content_id, err)
+            raise HomeAssistantError(
+                f"Could not read image file '{media_content_id}': {err}"
+            ) from err
         else:
             content_type = mimetypes.guess_type(media_url)[0] or "image/jpeg"
             _LOGGER.debug(
@@ -712,7 +767,8 @@ async def _fetch_http(
             )
             return image_data, content_type
     except aiohttp.ClientError as err:
-        raise HomeAssistantError(f"Could not fetch image: {err}") from err
+        _LOGGER.error("Failed to fetch image from %s: %s", url, err)
+        raise HomeAssistantError(f"Could not fetch image '{url}': {err}") from err
 
 
 async def _upload_to_api(

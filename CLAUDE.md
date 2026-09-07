@@ -11,7 +11,7 @@ Persistent project context for Claude Code. Read this file first in every sessio
   manufacturer's dev team.
 - **No relation to Paperless-ngx** (the document management system). Never research, cite, or
   reference Paperless-ngx sources — they are irrelevant and confusing false positives.
-- Accepted into the official HACS default store. Current stable release: **v2.0.1**.
+- Accepted into the official HACS default store. Current stable release: **v2.1.0**.
 
 ## Session Workflow (applies to every new chat/session on this project)
 
@@ -41,6 +41,12 @@ codebase and must not proceed carelessly.
    - Remind Roland to check that the `hassfest` GitHub Action passed after pushing — **not** to
      run `script.hassfest` locally (see Development Workflow below for why).
    - Propose an English-language commit message summarizing the change.
+8. **`CHANGELOG.md` must be updated before every commit on any branch** that changes code — add or
+   update the relevant entry (under a new `## [Unreleased]` heading at the top until the change is
+   tagged/released, per [Keep a Changelog](https://keepachangelog.com/)) in the same commit as the
+   change itself, alongside the per-file `# CHANGE HISTORY` comment block described under Coding
+   Standards below. Do not let it drift out of sync the way the per-file comments alone eventually
+   required a manual reconciliation to fix.
 
 ## Coding Standards
 
@@ -53,6 +59,13 @@ codebase and must not proceed carelessly.
   user-facing text.
 - Minimum supported GUI languages: **English and German** (project actually ships 7: en, de, fr,
   sv, nl, et, cs — keep all 7 in sync when touching translation files).
+- **Exception: Logbook `async_describe_events` narrative text (`logbook.py`) is English-only by
+  design.** Home Assistant core provides no localization hook for the messages a
+  `async_describe_events` callback returns — confirmed by checking several core integrations'
+  own `logbook.py` (bthome, shelly, alexa, script, automation), all of which hardcode English the
+  same way. The "translation keys only" rule above applies to entity/service/config-flow strings,
+  not to this surface — don't flag it as a bug or attempt to route it through
+  `translations/*.json`.
 - Ruff-clean codebase. Scoped `pyproject.toml` lives in
   `custom_components/paperlesspaper/pyproject.toml`:
   - No `known-first-party = ["homeassistant"]` in the scoped config.
@@ -164,7 +177,7 @@ codebase and must not proceed carelessly.
 - HACS icon shows correctly in HA Settings → Devices & Services but not in HACS's own UI — this is
   a known HACS-side bug (hacs/integration#5171, #5223), not something to "fix" in this repo.
 
-## Current State (v2.0.1)
+## Current State (v2.1.0)
 
 - Dynamic device discovery + auto re-linking via stable `deviceId`.
 - `OrphanedDeviceRepairFlow` (Delete / manual Relink) + `async_remove_config_entry_device`.
@@ -175,7 +188,10 @@ codebase and must not proceed carelessly.
   reset available in Options Flow.
 - Event firing: `paperlesspaper_image_uploaded` (+ logbook), plus polled
   `paperlesspaper_device_woke_up` / `paperlesspaper_device_state_changed` (sliding-window
-  `DateStart`/`DateEnd` to avoid dupes).
+  `DateStart`/`DateEnd` to avoid dupes). Fetch-stage failures in `upload_image`/`upload_random_image`
+  (media resolution, local file read, HTTP fetch) also fire `status: failed` now (Issue #35), naming
+  the failing `media_content_id`/URL in both the log and the event — previously only failures inside
+  `_upload_to_api` fired an event at all.
 - Sensors: battery, next sync, sleep time (+ predict diagnostic), wifi signal, frame orientation
   (buggy on firmware 3.0.14 — see below), picture synced, last wakeup, wake reason, last update
   state. Binary sensors: reachable, update pending. Buttons: reboot, reset sensors.
@@ -183,10 +199,6 @@ codebase and must not proceed carelessly.
 
 ## Open Issues / On the Horizon
 
-- **Issue #35** (contributor itchensen): enrich `_fetch_media_source()` errors with
-  `media_content_id`, fire `paperlesspaper_image_uploaded` with `status: failed` on fetch failures
-  in `upload_image`/`upload_random_image`. Assessed low-risk, technically sound. Queued pending
-  review of event payload shape, logging conventions, translations.
 - **Firmware 3.0.14 orientation bug**: `_ORIENTATION_MAP` in `sensor.py` doesn't handle the new
   4-state encoding — orient values 0/1/2 surface as `unknown`. Preferred fix (Option B): collapse
   to coarse portrait/landscape states, expose raw value via
