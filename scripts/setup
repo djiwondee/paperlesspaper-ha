@@ -127,6 +127,15 @@ media_source:
 # part of the base homeassistant package's own requirements.
 logbook:
 history:
+# Without these three keys, HA still "sets up" the automation/script/scene
+# domains (they're always-loaded core components) but never actually reads
+# automations.yaml/scripts.yaml/scenes.yaml into entities - the UI editor
+# saves to the file and reports success, yet no entity is ever created and
+# nothing shows up under Settings > Automations & Scenes. No extra pip
+# requirements.
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
 
 logger:
   default: info
