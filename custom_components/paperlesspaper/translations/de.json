@@ -156,6 +156,9 @@
         "state": {
           "portrait": "Hochformat",
           "landscape": "Querformat",
+          "landscape_right": "Querformat (nach rechts geneigt)",
+          "landscape_left": "Querformat (nach links geneigt)",
+          "portrait_upside_down": "Hochformat (auf dem Kopf)",
           "unknown": "Unbekannt"
         }
       }

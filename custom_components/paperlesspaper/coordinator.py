@@ -120,6 +120,16 @@
 #                    and — per user-confirmed API testing — stable across
 #                    re-registration in the paperlesspaper app.
 # 2026-08-03  2.0.1  Preparation for new release
+# 2026-09-08  2.1.1  Persist fw_version across transient ping failures
+#                    (_last_known_fw_version), mirroring the existing
+#                    _event_sensor_cache pattern. Previously fw_version was
+#                    only present in a device's data for polls where the ping
+#                    succeeded — a single failed ping made it disappear for
+#                    that cycle. PaperlessOrientationSensor (sensor.py) now
+#                    depends on fw_version to pick the correct orientation
+#                    mapping per firmware generation, so a missing value would
+#                    have caused it to silently (and incorrectly) fall back to
+#                    the legacy 2.x mapping on transient failures. (Issue #34)
 # =============================================================================
 
 from __future__ import annotations
@@ -227,6 +237,15 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         # only and resets on HA restart (sensors show Unknown until first wake-up).
         # Structure: {pp_device_id: {"wifi_rssi": int|None, "orientation": int|None}}
         self._event_sensor_cache: dict[str, dict] = {}
+
+        # Cache for the last successfully fetched fw_version per device. The
+        # ping endpoint only returns fw_version when the ping succeeds, so
+        # without this cache a single transient ping failure would make
+        # fw_version disappear from the device dict for that poll cycle.
+        # PaperlessOrientationSensor (sensor.py) relies on fw_version staying
+        # stable across polls to pick the correct orientation mapping.
+        # Structure: {pp_device_id: fw_version str}
+        self._last_known_fw_version: dict[str, str] = {}
 
         # In-memory tracking of the last successfully fetched event timestamp
         # per device (millisecond epoch). None means no prior fetch in this
@@ -986,6 +1005,15 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                 # Ping device → enriched status data
                 ping_data = await self._ping_device(device_id)
                 device.update(ping_data)
+
+                # fw_version is only present in ping_data when the ping
+                # succeeds. Persist the last known value so it survives a
+                # transient ping failure instead of disappearing for that
+                # poll cycle (see _last_known_fw_version CHANGE HISTORY).
+                if ping_data.get("fw_version"):
+                    self._last_known_fw_version[device_id] = ping_data["fw_version"]
+                elif device_id in self._last_known_fw_version:
+                    device["fw_version"] = self._last_known_fw_version[device_id]
 
                 # Apply cached event sensor values (wifi_rssi, orientation)
                 # from previous activate events. These survive poll cycles so

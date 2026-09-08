@@ -156,6 +156,9 @@
         "state": {
           "portrait": "Na výšku",
           "landscape": "Na šířku",
+          "landscape_right": "Na šířku (natočeno doprava)",
+          "landscape_left": "Na šířku (natočeno doleva)",
+          "portrait_upside_down": "Na výšku (vzhůru nohama)",
           "unknown": "Neznámá"
         }
       }

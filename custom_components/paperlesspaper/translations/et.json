@@ -156,6 +156,9 @@
         "state": {
           "portrait": "Portree",
           "landscape": "Maastik",
+          "landscape_right": "Maastik (paremale kallutatud)",
+          "landscape_left": "Maastik (vasakule kallutatud)",
+          "portrait_upside_down": "Portree (peapeal)",
           "unknown": "Tundmatu"
         }
       }

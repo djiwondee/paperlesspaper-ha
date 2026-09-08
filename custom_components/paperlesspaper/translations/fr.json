@@ -156,6 +156,9 @@
         "state": {
           "portrait": "Portrait",
           "landscape": "Paysage",
+          "landscape_right": "Paysage (incliné à droite)",
+          "landscape_left": "Paysage (incliné à gauche)",
+          "portrait_upside_down": "Portrait (à l'envers)",
           "unknown": "Inconnu"
         }
       }
