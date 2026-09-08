@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Default](https://img.shields.io/badge/HACS-Default-blue.svg)](https://github.com/hacs/default)
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-2.1.1-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Validate](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml)
@@ -150,7 +150,7 @@ For each ePaper device the integration creates:
 | `sensor.<device>_sleep_interval` | Configured sleep interval | s | — |
 | `sensor.<device>_predicted_sleep_interval` | Predicted sleep interval *(disabled by default)* | s | Diagnostic |
 | `sensor.<device>_wifi_signal_strength` | WiFi signal strength at last wake-up | dBm | Diagnostic |
-| `sensor.<device>_frame_orientation` | Display orientation at last wake-up | portrait / landscape | Diagnostic |
+| `sensor.<device>_frame_orientation` | Display orientation at last wake-up | portrait / landscape (firmware-aware since v2.1.1) | Diagnostic |
 
 ### Binary Sensors
 
@@ -187,6 +187,8 @@ The integration fetches all new events since the last poll on every coordinator 
 ### Why sensor values update only every ~60 minutes
 
 `WiFi Signal Strength` and `Frame Orientation` are sourced exclusively from the `activate` event payload — they are not available from the regular ping endpoint. Since the device only wakes up once per sleep interval (default: 3600 seconds / 60 minutes), these sensors will show `Unknown` after a fresh HA start or restart until the device wakes up for the first time. After the first wake-up, the last-known values are retained across poll cycles so the sensors never revert to `Unknown` during normal operation.
+
+The raw `orient` value reported by the device is encoded differently depending on firmware generation: firmware 2.x reports a 2-state value (0 = portrait, 3 = landscape), while firmware 3.x reports a 4-state value, one per physical rotation. Since v2.1.1 the integration detects each device's firmware version and maps accordingly, so `Frame Orientation` reports the correct `portrait`/`landscape` state on both generations. The raw integer is always available via the entity's `orientation_raw` attribute, including the fine-grained 4-state value on firmware 3.x devices.
 
 ### HA Events
 

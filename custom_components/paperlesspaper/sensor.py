@@ -45,11 +45,21 @@
 #                    read from the coordinator device dict fields wifi_rssi
 #                    and orientation which are populated by the coordinator's
 #                    _process_device_events() after each activate event.
+# 2026-09-08  2.1.1  PaperlessOrientationSensor: firmware-aware orientation
+#                    mapping. Firmware 3.x reports a 4-state orient value
+#                    (0/2=landscape, 1/3=portrait) instead of 2.x's 2-state
+#                    value (0=portrait, 3=landscape) - selects the map from
+#                    device fw_version (major version >= 3). icon now derives
+#                    from the resolved native_value instead of its own
+#                    separate orient==3 check. Unmapped orient values now log
+#                    a one-time warning per (device, value) instead of
+#                    silently returning "unknown". (Issue #34)
 # =============================================================================
 
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from typing import ClassVar
 
 from homeassistant.components.sensor import (
@@ -66,6 +76,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PaperlessCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 # Battery voltage range for percentage calculation (in Volts)
 BAT_VOLTAGE_MIN = 4.4  # 0% — minimum operating voltage
@@ -357,15 +369,21 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
     via GET /devices/events. The value is populated by the coordinator's
     _process_device_events() method into the device dict field 'orientation'.
 
-    Known device values:
-        0 = Portrait
-        3 = Landscape (both +90° and -90° map to 3)
-    Values 1 and 2 are not currently reported by the hardware.
+    The raw 'orient' encoding differs by firmware generation (Issue #34):
+        Firmware 2.x: 0 = Portrait, 3 = Landscape (both rotation directions
+            map to 3). Values 1 and 2 are not reported.
+        Firmware 3.x: 4-state encoding, one value per physical rotation —
+            0/2 = Landscape (tilted right/left), 1/3 = Portrait (normal/
+            upside-down).
+    The device's fw_version (see coordinator._last_known_fw_version) decides
+    which map applies, compared by major version only — see CHANGE HISTORY
+    for why patch-level differentiation isn't warranted.
 
-    The sensor exposes a human-readable string state ("portrait" / "landscape"
-    / "unknown") rather than the raw integer so the HA UI displays a
-    meaningful label without requiring a template. The raw value is preserved
-    in extra_state_attributes for automation authors who need the integer.
+    The sensor exposes a coarse, human-readable string state ("portrait" /
+    "landscape" / "unknown") rather than the raw integer so the HA UI
+    displays a meaningful label without requiring a template, regardless of
+    firmware generation. The raw value is preserved in extra_state_attributes
+    for automation authors who need the fine-grained (firmware 3.x) integer.
     """
 
     _field = "orientation"
@@ -374,32 +392,60 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
     # Enabled by default — useful for diagnosing frame mounting issues
 
     # Map raw API integer → internal state string (used as translation key)
-    _ORIENTATION_MAP: ClassVar[dict[int, str]] = {
+    _ORIENTATION_MAP_LEGACY: ClassVar[dict[int, str]] = {
         0: "portrait",
         3: "landscape",
     }
+    _ORIENTATION_MAP_V3: ClassVar[dict[int, str]] = {
+        0: "landscape",
+        1: "portrait",
+        2: "landscape",
+        3: "portrait",
+    }
+
+    # Tracks (device_id, raw_value) pairs already logged as unmapped, so a
+    # persistently unmapped value only warns once instead of on every poll.
+    _warned_unmapped_values: ClassVar[set[tuple[str, int]]] = set()
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
         super().__init__(coordinator, device, "orientation", "frame_orientation")
 
+    @staticmethod
+    def _major_fw_version(fw_version: str | None) -> int | None:
+        """Return the leading integer component of a fw_version string.
+
+        Returns None if fw_version is missing or doesn't start with a
+        parseable integer (e.g. "3.0.14" -> 3, None/"" -> None).
+        """
+        if not fw_version:
+            return None
+        try:
+            return int(str(fw_version).split(".")[0])
+        except (ValueError, TypeError):
+            return None
+
+    def _resolve_map(self) -> dict[int, str]:
+        """Return the orientation map matching this device's firmware."""
+        fw_version = self._device.get("fw_version") if self._device else None
+        major = self._major_fw_version(fw_version)
+        if major is not None and major >= 3:
+            return self._ORIENTATION_MAP_V3
+        return self._ORIENTATION_MAP_LEGACY
+
     @property
     def icon(self) -> str:
-        """Return an icon matching the current orientation."""
-        val = self._device.get("orientation") if self._device else None
-        if val is not None:
-            try:
-                if int(val) == 3:
-                    return "mdi:phone-rotate-landscape"
-            except (ValueError, TypeError):
-                pass
+        """Return an icon matching the current (resolved) orientation."""
+        if self.native_value == "landscape":
+            return "mdi:phone-rotate-landscape"
         return "mdi:phone-rotate-portrait"
 
     @property
     def native_value(self) -> str | None:
         """Return orientation as a human-readable string state.
 
-        Returns "portrait", "landscape", or "unknown" for unmapped values.
+        Returns "portrait", "landscape", or "unknown" for unmapped values
+        (a one-time warning is logged per unmapped (device, value) pair).
         Returns None when no activate event has been received yet.
         """
         if self._device is None:
@@ -408,9 +454,27 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
         if val is None:
             return None
         try:
-            return self._ORIENTATION_MAP.get(int(val), "unknown")
+            val_int = int(val)
         except (ValueError, TypeError):
             return None
+
+        mapping = self._resolve_map()
+        result = mapping.get(val_int)
+        if result is not None:
+            return result
+
+        warn_key = (self._device_id, val_int)
+        if warn_key not in self._warned_unmapped_values:
+            self._warned_unmapped_values.add(warn_key)
+            _LOGGER.warning(
+                "Unmapped orientation value %s for device %s (fw_version=%s); "
+                "reporting 'unknown'. Please report this on Issue #34 so the "
+                "mapping can be extended.",
+                val_int,
+                self._device.get("deviceId") or self._device_id,
+                self._device.get("fw_version"),
+            )
+        return "unknown"
 
     @property
     def extra_state_attributes(self) -> dict:
