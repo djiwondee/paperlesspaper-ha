@@ -13,10 +13,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reports a 4-state `orient` value (one per physical rotation) while the sensor's mapping only
   understood firmware 2.x's 2-state value (`0=portrait`, `3=landscape`). The mapping is now
   firmware-aware — selected from the device's `fw_version` (major version `>= 3` picks the new
-  4-state map, down-mapped to the same `portrait`/`landscape` states) — so both firmware
-  generations report correctly. An unmapped `orient` value now logs a one-time warning per
-  device instead of silently returning `unknown`. The sensor's `icon` property, which had its own
-  separate (and equally outdated) orientation check, now derives from the same resolved value.
+  4-state map) — so both firmware generations report correctly. Firmware ≥ 3.x devices now report
+  the exact rotation as one of 4 distinct, fully localized states (`landscape_right`, `portrait`,
+  `landscape_left`, `portrait_upside_down`) instead of being down-mapped to coarse
+  `portrait`/`landscape` — needed to pick the correct image orientation before upload. Firmware
+  < 3.x devices are unaffected and still report the coarse `portrait`/`landscape` state, which is
+  all that firmware generation can distinguish. An unmapped `orient` value now logs a one-time
+  warning per device instead of silently returning `unknown`. The sensor's `icon` property, which
+  had its own separate (and equally outdated) orientation check, now derives from the same
+  resolved value.
   Also fixes a related reliability gap: `fw_version` is now persisted across a transient ping
   failure instead of disappearing from the device's data for that poll cycle, which — since the
   orientation mapping now depends on it — could otherwise have caused a momentary incorrect

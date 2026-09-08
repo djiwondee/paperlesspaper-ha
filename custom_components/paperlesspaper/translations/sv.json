@@ -156,6 +156,9 @@
         "state": {
           "portrait": "Stående",
           "landscape": "Liggande",
+          "landscape_right": "Liggande (lutad åt höger)",
+          "landscape_left": "Liggande (lutad åt vänster)",
+          "portrait_upside_down": "Stående (upp och ner)",
           "unknown": "Okänd"
         }
       }

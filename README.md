@@ -150,7 +150,7 @@ For each ePaper device the integration creates:
 | `sensor.<device>_sleep_interval` | Configured sleep interval | s | — |
 | `sensor.<device>_predicted_sleep_interval` | Predicted sleep interval *(disabled by default)* | s | Diagnostic |
 | `sensor.<device>_wifi_signal_strength` | WiFi signal strength at last wake-up | dBm | Diagnostic |
-| `sensor.<device>_frame_orientation` | Display orientation at last wake-up | portrait / landscape (firmware-aware since v2.1.1) | Diagnostic |
+| `sensor.<device>_frame_orientation` | Display orientation at last wake-up | portrait / landscape (firmware < 3.x); landscape (tilted right/left) / portrait / portrait (upside-down) (firmware ≥ 3.x) — firmware-aware since v2.1.1 | Diagnostic |
 
 ### Binary Sensors
 
@@ -188,7 +188,7 @@ The integration fetches all new events since the last poll on every coordinator 
 
 `WiFi Signal Strength` and `Frame Orientation` are sourced exclusively from the `activate` event payload — they are not available from the regular ping endpoint. Since the device only wakes up once per sleep interval (default: 3600 seconds / 60 minutes), these sensors will show `Unknown` after a fresh HA start or restart until the device wakes up for the first time. After the first wake-up, the last-known values are retained across poll cycles so the sensors never revert to `Unknown` during normal operation.
 
-The raw `orient` value reported by the device is encoded differently depending on firmware generation: firmware 2.x reports a 2-state value (0 = portrait, 3 = landscape), while firmware 3.x reports a 4-state value, one per physical rotation. Since v2.1.1 the integration detects each device's firmware version and maps accordingly, so `Frame Orientation` reports the correct `portrait`/`landscape` state on both generations. The raw integer is always available via the entity's `orientation_raw` attribute, including the fine-grained 4-state value on firmware 3.x devices.
+The raw `orient` value reported by the device is encoded differently depending on firmware generation: firmware 2.x reports a 2-state value (0 = portrait, 3 = landscape), while firmware 3.x reports a 4-state value, one per physical rotation (0 = landscape tilted right, 1 = portrait, 2 = landscape tilted left, 3 = portrait upside-down). Since v2.1.1 the integration detects each device's firmware version and maps accordingly: firmware < 3.x devices report the coarse `portrait`/`landscape` state (all the hardware can distinguish), while firmware ≥ 3.x devices report the exact rotation as one of 4 distinct states — useful when the orientation of an image needs to be chosen before upload. The raw integer is always available via the entity's `orientation_raw` attribute.
 
 ### HA Events
 

@@ -47,13 +47,17 @@
 #                    _process_device_events() after each activate event.
 # 2026-09-08  2.1.1  PaperlessOrientationSensor: firmware-aware orientation
 #                    mapping. Firmware 3.x reports a 4-state orient value
-#                    (0/2=landscape, 1/3=portrait) instead of 2.x's 2-state
-#                    value (0=portrait, 3=landscape) - selects the map from
-#                    device fw_version (major version >= 3). icon now derives
-#                    from the resolved native_value instead of its own
-#                    separate orient==3 check. Unmapped orient values now log
-#                    a one-time warning per (device, value) instead of
-#                    silently returning "unknown". (Issue #34)
+#                    (0=landscape_right, 1=portrait, 2=landscape_left,
+#                    3=portrait_upside_down) instead of 2.x's 2-state value
+#                    (0=portrait, 3=landscape) - selects the map from device
+#                    fw_version (major version >= 3). Firmware 3.x's 4 states
+#                    are exposed as-is (not down-mapped to coarse
+#                    portrait/landscape) since the exact rotation matters for
+#                    use cases like orienting an image before upload. icon
+#                    now derives from the resolved native_value instead of
+#                    its own separate orient==3 check. Unmapped orient values
+#                    now log a one-time warning per (device, value) instead
+#                    of silently returning "unknown". (Issue #34)
 # =============================================================================
 
 from __future__ import annotations
@@ -371,19 +375,25 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
 
     The raw 'orient' encoding differs by firmware generation (Issue #34):
         Firmware 2.x: 0 = Portrait, 3 = Landscape (both rotation directions
-            map to 3). Values 1 and 2 are not reported.
+            map to 3). Values 1 and 2 are not reported. Reported as the
+            coarse states "portrait" / "landscape" — that's all this
+            firmware generation can distinguish.
         Firmware 3.x: 4-state encoding, one value per physical rotation —
-            0/2 = Landscape (tilted right/left), 1/3 = Portrait (normal/
-            upside-down).
+            0 = Landscape (tilted right), 1 = Portrait (normal), 2 =
+            Landscape (tilted left), 3 = Portrait (upside-down). Reported
+            as the 4 distinct states "landscape_right" / "portrait" /
+            "landscape_left" / "portrait_upside_down", since the exact
+            rotation matters for use cases like orienting an image before
+            upload — down-mapping to coarse portrait/landscape would lose
+            that information.
     The device's fw_version (see coordinator._last_known_fw_version) decides
     which map applies, compared by major version only — see CHANGE HISTORY
     for why patch-level differentiation isn't warranted.
 
-    The sensor exposes a coarse, human-readable string state ("portrait" /
-    "landscape" / "unknown") rather than the raw integer so the HA UI
-    displays a meaningful label without requiring a template, regardless of
-    firmware generation. The raw value is preserved in extra_state_attributes
-    for automation authors who need the fine-grained (firmware 3.x) integer.
+    The sensor exposes a human-readable string state rather than the raw
+    integer so the HA UI displays a meaningful label without requiring a
+    template. The raw integer is preserved in extra_state_attributes for
+    automation authors who need it directly.
     """
 
     _field = "orientation"
@@ -397,10 +407,10 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
         3: "landscape",
     }
     _ORIENTATION_MAP_V3: ClassVar[dict[int, str]] = {
-        0: "landscape",
-        1: "portrait",
-        2: "landscape",
-        3: "portrait",
+        0: "landscape_right",       # tilted right
+        1: "portrait",              # normal
+        2: "landscape_left",        # tilted left
+        3: "portrait_upside_down",  # upside-down
     }
 
     # Tracks (device_id, raw_value) pairs already logged as unmapped, so a
@@ -436,7 +446,8 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
     @property
     def icon(self) -> str:
         """Return an icon matching the current (resolved) orientation."""
-        if self.native_value == "landscape":
+        val = self.native_value
+        if val is not None and val.startswith("landscape"):
             return "mdi:phone-rotate-landscape"
         return "mdi:phone-rotate-portrait"
 

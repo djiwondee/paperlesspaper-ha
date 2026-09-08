@@ -156,6 +156,9 @@
         "state": {
           "portrait": "Staand",
           "landscape": "Liggend",
+          "landscape_right": "Liggend (naar rechts gekanteld)",
+          "landscape_left": "Liggend (naar links gekanteld)",
+          "portrait_upside_down": "Staand (ondersteboven)",
           "unknown": "Onbekend"
         }
       }
