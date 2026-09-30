@@ -5,6 +5,18 @@ All notable changes to `paperlesspaper-ha` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2026-09-30
+
+### Fixed
+
+- Repeated `Timeout fetching paperlesspaper data` errors: API timeouts raise `TimeoutError`, which
+  is not an `aiohttp.ClientError` and was not caught anywhere in the coordinator, so a single slow
+  request aborted the whole poll and made all entities unavailable for that cycle. A slow ping or
+  event request now only marks that device as unreachable / skips its events for the cycle, device
+  list timeouts are retried with the existing backoff, a timeout while validating the stored
+  paper ID falls back to the stored value, and remaining timeouts surface as a
+  descriptive `UpdateFailed` instead of HA's generic message.
+
 ## [2.1.1] - 2026-09-08
 
 ### Fixed
