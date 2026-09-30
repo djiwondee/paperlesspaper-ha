@@ -130,6 +130,19 @@
 #                    mapping per firmware generation, so a missing value would
 #                    have caused it to silently (and incorrectly) fall back to
 #                    the legacy 2.x mapping on transient failures. (Issue #34)
+# 2026-09-30  2.1.2  Handle TimeoutError (raised by aiohttp.ClientTimeout, NOT
+#                    an aiohttp.ClientError) which previously escaped every
+#                    except block and aborted the whole poll with HA's generic
+#                    "Timeout fetching paperlesspaper data" error:
+#                    - _ping_device / _fetch_device_events: a timeout now
+#                      degrades gracefully (reachable=False / no events).
+#                    - _fetch_device_list: timeouts are retried with the
+#                      existing backoff like connection errors.
+#                    - _ensure_paper_id: a timeout while validating the stored
+#                      paper_id falls back to the stored value (as for other
+#                      client errors) instead of aborting the poll.
+#                    - _async_update_data: any remaining TimeoutError becomes a
+#                      descriptive UpdateFailed.
 # =============================================================================
 
 from __future__ import annotations
@@ -465,8 +478,10 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                     "Stored paper_id %s no longer exists on API, will use device paper field",
                     stored_paper_id,
                 )
-            except aiohttp.ClientError as err:
-                _LOGGER.warning("Could not validate paper_id: %s", err)
+            except (aiohttp.ClientError, TimeoutError) as err:
+                _LOGGER.warning(
+                    "Could not validate paper_id: %s", str(err) or type(err).__name__
+                )
                 return stored_paper_id
 
         # Use paper field from device response as fallback
@@ -564,8 +579,12 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug("Ping %s -> reachable=%s", device_id, result["reachable"])
                 return result
 
-        except aiohttp.ClientError as err:
-            _LOGGER.debug("Ping %s -> error: %s", device_id, err)
+        except (aiohttp.ClientError, TimeoutError) as err:
+            # TimeoutError (from ClientTimeout) is not a ClientError; without
+            # catching it a slow ping would abort the whole poll cycle.
+            _LOGGER.debug(
+                "Ping %s -> error: %s", device_id, str(err) or type(err).__name__
+            )
             return {"reachable": False}
 
     # ------------------------------------------------------------------
@@ -742,9 +761,10 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                     device_id, type(data),
                 )
                 return []
-        except aiohttp.ClientError as err:
+        except (aiohttp.ClientError, TimeoutError) as err:
             _LOGGER.debug(
-                "Event fetch for device %s failed: %s — skipping", device_id, err
+                "Event fetch for device %s failed: %s — skipping",
+                device_id, str(err) or type(err).__name__,
             )
             return []
 
@@ -918,13 +938,15 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                         resp.raise_for_status()
                         data = await resp.json()
                         return data.get("results", [])
-            except aiohttp.ClientConnectionError as err:
+            except (aiohttp.ClientConnectionError, TimeoutError) as err:
+                # TimeoutError is not a ClientError, so it must be listed
+                # explicitly to get the same retry/backoff treatment.
                 last_error = err
                 last_retry_after = None
                 _LOGGER.warning(
                     "Device list fetch connection error on attempt %d/%d: "
                     "%s — will %s",
-                    attempt, max_attempts, err,
+                    attempt, max_attempts, str(err) or type(err).__name__,
                     "retry" if attempt < max_attempts else "give up",
                 )
             except aiohttp.ClientResponseError:
@@ -1038,6 +1060,9 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Connection error: {err}") from err
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Client error: {err}") from err
+        except TimeoutError as err:
+            # Device list retries exhausted, or a paper endpoint timed out.
+            raise UpdateFailed("Timeout while contacting the paperlesspaper API") from err
         else:
             self._reconcile_devices(devices)
             return devices

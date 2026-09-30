@@ -11,7 +11,7 @@ Persistent project context for Claude Code. Read this file first in every sessio
   manufacturer's dev team.
 - **No relation to Paperless-ngx** (the document management system). Never research, cite, or
   reference Paperless-ngx sources — they are irrelevant and confusing false positives.
-- Accepted into the official HACS default store. Current stable release: **v2.1.0**.
+- Accepted into the official HACS default store. Current stable release: **v2.1.2**.
 
 ## Session Workflow (applies to every new chat/session on this project)
 
@@ -161,6 +161,10 @@ codebase and must not proceed carelessly.
 - `GET /devices/events/:deviceId` requires `DateStart`, `DateEnd`, and `TypeFilter` all provided;
   response wrapped under a `"message"` key; timestamps must be **second-granular ISO format** to
   avoid duplicate event firing.
+- `aiohttp.ClientTimeout` raises `TimeoutError`, which is **not** an `aiohttp.ClientError` — every
+  `except aiohttp.ClientError` in the coordinator must list `TimeoutError` explicitly, otherwise a
+  single slow request escapes and HA logs the generic "Timeout fetching paperlesspaper data"
+  (fixed in v2.1.2).
 - `meta` key may be absent on freshly re-registered devices — always guard with `.get()` / `or {}`.
 - `DeviceInfo.serial_number` must come from `deviceId` — there is no `serial_number` field in the
   API.
@@ -177,7 +181,7 @@ codebase and must not proceed carelessly.
 - HACS icon shows correctly in HA Settings → Devices & Services but not in HACS's own UI — this is
   a known HACS-side bug (hacs/integration#5171, #5223), not something to "fix" in this repo.
 
-## Current State (v2.1.0)
+## Current State (v2.1.2)
 
 - Dynamic device discovery + auto re-linking via stable `deviceId`.
 - `OrphanedDeviceRepairFlow` (Delete / manual Relink) + `async_remove_config_entry_device`.
