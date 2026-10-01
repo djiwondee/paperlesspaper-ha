@@ -11,7 +11,7 @@ Persistent project context for Claude Code. Read this file first in every sessio
   manufacturer's dev team.
 - **No relation to Paperless-ngx** (the document management system). Never research, cite, or
   reference Paperless-ngx sources — they are irrelevant and confusing false positives.
-- Accepted into the official HACS default store. Current stable release: **v2.1.2**.
+- Accepted into the official HACS default store. Current stable release: **v2.1.3**.
 
 ## Session Workflow (applies to every new chat/session on this project)
 
@@ -165,6 +165,14 @@ codebase and must not proceed carelessly.
   `except aiohttp.ClientError` in the coordinator must list `TimeoutError` explicitly, otherwise a
   single slow request escapes and HA logs the generic "Timeout fetching paperlesspaper data"
   (fixed in v2.1.2).
+- Device model/hardware type: `device.get("kind")` reliably returns `"epd7"` (Paper 7 / 7") or
+  `"openpaper13"` (Paper 13 / L) — confirmed via a live `/devices/ping/:id` response and HA's own
+  Device Info page (Roland checked both, 2026-10-01). **Not documented** in the official API docs
+  (`https://docs.paperlesspaper.de/api-reference/devices/get` only lists
+  `id`/`name`/`serialNumber`/`status`/`createdAt`/`updatedAt`) — treat `kind` as empirically
+  confirmed, not officially guaranteed; re-verify if it ever stops showing up. Used by
+  `PaperlessOrientationSensor._resolve_map()` (sensor.py) for the Paper 7 vs Paper 13/L
+  orientation mapping — see Open Issues below.
 - `meta` key may be absent on freshly re-registered devices — always guard with `.get()` / `or {}`.
 - `DeviceInfo.serial_number` must come from `deviceId` — there is no `serial_number` field in the
   API.
@@ -181,7 +189,7 @@ codebase and must not proceed carelessly.
 - HACS icon shows correctly in HA Settings → Devices & Services but not in HACS's own UI — this is
   a known HACS-side bug (hacs/integration#5171, #5223), not something to "fix" in this repo.
 
-## Current State (v2.1.2)
+## Current State (v2.1.3)
 
 - Dynamic device discovery + auto re-linking via stable `deviceId`.
 - `OrphanedDeviceRepairFlow` (Delete / manual Relink) + `async_remove_config_entry_device`.
@@ -197,17 +205,25 @@ codebase and must not proceed carelessly.
   the failing `media_content_id`/URL in both the log and the event — previously only failures inside
   `_upload_to_api` fired an event at all.
 - Sensors: battery, next sync, sleep time (+ predict diagnostic), wifi signal, frame orientation
-  (buggy on firmware 3.0.14 — see below), picture synced, last wakeup, wake reason, last update
-  state. Binary sensors: reachable, update pending. Buttons: reboot, reset sensors.
+  (firmware- and device-model-aware as of v2.1.3 — interim mapping, see Open Issues below),
+  picture synced, last wakeup, wake reason, last update state. Binary sensors: reachable, update
+  pending. Buttons: reboot, reset sensors.
 - Full Repairs flow, reconfigure flow, complete 7-language translation coverage.
 
 ## Open Issues / On the Horizon
 
-- **Firmware 3.0.14 orientation bug**: `_ORIENTATION_MAP` in `sensor.py` doesn't handle the new
-  4-state encoding — orient values 0/1/2 surface as `unknown`. Preferred fix (Option B): collapse
-  to coarse portrait/landscape states, expose raw value via
-  `extra_state_attributes["orientation_raw"]`. Blocked on manufacturer documentation + Roland
-  getting a 3.0.14 device.
+- **`frame_orientation` Paper 7/Paper 13 mapping is an interim fix (v2.1.3)**: firmware ≥3.x's
+  4-state `orient` encoding differs by device model due to PCB alignment (Paper 7 vs Paper 13/L,
+  confirmed by the vendor `smarthomeagentur` on Issue #34 via a live PCB-alignment table).
+  `PaperlessOrientationSensor._resolve_map()` (sensor.py) branches on `device["kind"]`
+  (`"epd7"` vs `"openpaper13"`, unrecognized kinds default to the Paper 13 table with a one-time
+  warning). **This is explicitly interim**: the vendor stated a *future, unannounced* firmware
+  update will unify both models onto the Paper 7 table (tracked at
+  [paperlesspaper-firmware#61](https://github.com/paperlesspaper/paperlesspaper-firmware/issues/61)).
+  Once that ships, `kind=="openpaper13"` devices running the *new* firmware will need the Paper 7
+  map instead of the Paper 13 one — this will require a firmware-version-bounded follow-up once
+  that version number is known. Watch Issue #34 and the firmware ticket for updates; don't assume
+  this mapping is final.
 - Future `paperlesspaper_local` integration (separate, offline firmware support) — prerequisites:
   stable offline firmware, reliable multi-frame local discovery (mDNS), documented local device
   API. Hybrid/middleware designs explicitly ruled out.

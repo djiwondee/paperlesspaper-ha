@@ -58,6 +58,24 @@
 #                    its own separate orient==3 check. Unmapped orient values
 #                    now log a one-time warning per (device, value) instead
 #                    of silently returning "unknown". (Issue #34)
+# 2026-10-01  2.1.3  PaperlessOrientationSensor: firmware-3.x mapping is now
+#                    also device-model-aware (interim fix, see below). The
+#                    vendor confirmed the raw orient encoding differs by PCB
+#                    alignment: Paper 7 (device kind "epd7") uses
+#                    0=portrait, 1=landscape_left, 2=portrait_upside_down,
+#                    3=landscape_right, while Paper 13/L (kind
+#                    "openpaper13", also the default for an unrecognized
+#                    kind) keeps the previously-shipped mapping.
+#                    _ORIENTATION_MAP_V3 renamed to
+#                    _ORIENTATION_MAP_V3_PAPER13; added
+#                    _ORIENTATION_MAP_V3_PAPER7. An unrecognized device kind
+#                    on firmware >=3 now also logs a one-time warning (same
+#                    dedup pattern as unmapped orient values) before falling
+#                    back to the Paper 13 table. Known limitation: the vendor
+#                    plans a future firmware update that unifies Paper 13
+#                    devices onto the Paper 7 table too (no version number
+#                    yet) - this mapping will need a firmware-version-bounded
+#                    follow-up once that ships. (Issue #34)
 # =============================================================================
 
 from __future__ import annotations
@@ -373,22 +391,39 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
     via GET /devices/events. The value is populated by the coordinator's
     _process_device_events() method into the device dict field 'orientation'.
 
-    The raw 'orient' encoding differs by firmware generation (Issue #34):
+    The raw 'orient' encoding differs by firmware generation AND, for
+    firmware 3.x, by device model/hardware (Issue #34):
         Firmware 2.x: 0 = Portrait, 3 = Landscape (both rotation directions
             map to 3). Values 1 and 2 are not reported. Reported as the
             coarse states "portrait" / "landscape" — that's all this
             firmware generation can distinguish.
         Firmware 3.x: 4-state encoding, one value per physical rotation —
-            0 = Landscape (tilted right), 1 = Portrait (normal), 2 =
-            Landscape (tilted left), 3 = Portrait (upside-down). Reported
-            as the 4 distinct states "landscape_right" / "portrait" /
-            "landscape_left" / "portrait_upside_down", since the exact
-            rotation matters for use cases like orienting an image before
-            upload — down-mapping to coarse portrait/landscape would lose
-            that information.
+            but which integer maps to which rotation depends on the PCB
+            alignment of the device model (confirmed by the vendor,
+            smarthomeagentur, on Issue #34):
+                Paper 7 (device kind "epd7"): 0=Portrait, 1=Landscape tilted
+                    left, 2=Portrait upside-down, 3=Landscape tilted right.
+                Paper 13/L (device kind "openpaper13", also the default for
+                    any unrecognized kind): 0=Landscape tilted right,
+                    1=Portrait, 2=Landscape tilted left, 3=Portrait
+                    upside-down.
+            Reported as the 4 distinct states "landscape_right" / "portrait"
+            / "landscape_left" / "portrait_upside_down" in both cases, since
+            the exact rotation matters for use cases like orienting an image
+            before upload — down-mapping to coarse portrait/landscape would
+            lose that information.
     The device's fw_version (see coordinator._last_known_fw_version) decides
-    which map applies, compared by major version only — see CHANGE HISTORY
-    for why patch-level differentiation isn't warranted.
+    whether the legacy or a firmware-3.x map applies, compared by major
+    version only — see CHANGE HISTORY for why patch-level differentiation
+    isn't warranted. The device's 'kind' field then picks between the two
+    firmware-3.x maps.
+
+    Known limitation: the vendor stated a future firmware update will unify
+    Paper 13 devices onto the Paper 7 table too (tracked at
+    https://github.com/paperlesspaper/paperlesspaper-firmware/issues/61, no
+    version number yet). When that ships, "openpaper13" devices on the new
+    firmware will need the Paper 7 map, not the Paper 13 one — this will
+    need a firmware-version-bounded follow-up once that version is known.
 
     The sensor exposes a human-readable string state rather than the raw
     integer so the HA UI displays a meaningful label without requiring a
@@ -406,16 +441,33 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
         0: "portrait",
         3: "landscape",
     }
-    _ORIENTATION_MAP_V3: ClassVar[dict[int, str]] = {
+    # Firmware 3.x: two maps, selected by device model (device["kind"]) —
+    # the PCB alignment differs between models, so the same raw orient value
+    # means a different physical rotation on each (confirmed by the vendor
+    # on Issue #34). Paper 13 is also the default for an unrecognized kind,
+    # since it was the first confirmed-working mapping (itchensen's device).
+    _ORIENTATION_MAP_V3_PAPER13: ClassVar[dict[int, str]] = {
         0: "landscape_right",       # tilted right
         1: "portrait",              # normal
         2: "landscape_left",        # tilted left
         3: "portrait_upside_down",  # upside-down
     }
+    _ORIENTATION_MAP_V3_PAPER7: ClassVar[dict[int, str]] = {
+        0: "portrait",              # normal
+        1: "landscape_left",        # tilted left
+        2: "portrait_upside_down",  # upside-down
+        3: "landscape_right",       # tilted right
+    }
+    _DEVICE_KIND_PAPER7 = "epd7"
+    _DEVICE_KIND_PAPER13 = "openpaper13"
 
     # Tracks (device_id, raw_value) pairs already logged as unmapped, so a
     # persistently unmapped value only warns once instead of on every poll.
     _warned_unmapped_values: ClassVar[set[tuple[str, int]]] = set()
+
+    # Tracks (device_id, kind) pairs already logged as an unrecognized
+    # device kind, so a persistently unrecognized kind only warns once.
+    _warned_unknown_kinds: ClassVar[set[tuple[str, str | None]]] = set()
 
     def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
         """Initialize."""
@@ -436,12 +488,28 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
             return None
 
     def _resolve_map(self) -> dict[int, str]:
-        """Return the orientation map matching this device's firmware."""
+        """Return the orientation map matching this device's firmware/model."""
         fw_version = self._device.get("fw_version") if self._device else None
         major = self._major_fw_version(fw_version)
-        if major is not None and major >= 3:
-            return self._ORIENTATION_MAP_V3
-        return self._ORIENTATION_MAP_LEGACY
+        if major is None or major < 3:
+            return self._ORIENTATION_MAP_LEGACY
+
+        kind = self._device.get("kind") if self._device else None
+        if kind == self._DEVICE_KIND_PAPER7:
+            return self._ORIENTATION_MAP_V3_PAPER7
+        if kind != self._DEVICE_KIND_PAPER13:
+            warn_key = (self._device_id, kind)
+            if warn_key not in self._warned_unknown_kinds:
+                self._warned_unknown_kinds.add(warn_key)
+                _LOGGER.warning(
+                    "Unrecognized device kind %r for device %s (fw_version=%s); "
+                    "defaulting to the Paper 13 orientation table. Please "
+                    "report this on Issue #34 so the mapping can be extended.",
+                    kind,
+                    self._device.get("deviceId") or self._device_id,
+                    fw_version,
+                )
+        return self._ORIENTATION_MAP_V3_PAPER13
 
     @property
     def icon(self) -> str:
