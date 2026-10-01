@@ -7,6 +7,6 @@
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/djiwondee/paperlesspaper-ha/issues",
-  "requirements": ["aiohttp>=3.9.0", "aiofiles>=23.0.0"],
+  "requirements": ["aiofiles>=23.0.0"],
   "version": "2.1.2"
 }
