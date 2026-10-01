@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![HACS Default](https://img.shields.io/badge/HACS-Default-blue.svg)](https://github.com/hacs/default)
-[![Version](https://img.shields.io/badge/version-2.1.2-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-2.1.3-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Validate](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml)
@@ -188,7 +188,11 @@ The integration fetches all new events since the last poll on every coordinator 
 
 `WiFi Signal Strength` and `Frame Orientation` are sourced exclusively from the `activate` event payload — they are not available from the regular ping endpoint. Since the device only wakes up once per sleep interval (default: 3600 seconds / 60 minutes), these sensors will show `Unknown` after a fresh HA start or restart until the device wakes up for the first time. After the first wake-up, the last-known values are retained across poll cycles so the sensors never revert to `Unknown` during normal operation.
 
-The raw `orient` value reported by the device is encoded differently depending on firmware generation: firmware 2.x reports a 2-state value (0 = portrait, 3 = landscape), while firmware 3.x reports a 4-state value, one per physical rotation (0 = landscape tilted right, 1 = portrait, 2 = landscape tilted left, 3 = portrait upside-down). Since v2.1.1 the integration detects each device's firmware version and maps accordingly: firmware < 3.x devices report the coarse `portrait`/`landscape` state (all the hardware can distinguish), while firmware ≥ 3.x devices report the exact rotation as one of 4 distinct states — useful when the orientation of an image needs to be chosen before upload. The raw integer is always available via the entity's `orientation_raw` attribute.
+The raw `orient` value reported by the device is encoded differently depending on firmware generation: firmware 2.x reports a 2-state value (0 = portrait, 3 = landscape), while firmware 3.x reports a 4-state value, one per physical rotation. Since v2.1.1 the integration detects each device's firmware version and maps accordingly: firmware < 3.x devices report the coarse `portrait`/`landscape` state (all the hardware can distinguish), while firmware ≥ 3.x devices report the exact rotation as one of 4 distinct states — useful when the orientation of an image needs to be chosen before upload.
+
+For firmware ≥ 3.x, the 4-state encoding is *also* device-model-dependent: Paper 7 and Paper 13/L devices use a different `orient` → rotation mapping due to a difference in PCB alignment (confirmed by the device vendor). The integration detects the device model from its `kind` field and picks the matching table automatically — no configuration needed.
+
+**This model-aware mapping is an interim fix.** The vendor has said a future firmware update will unify both device models onto the same (Paper 7) table — no version number yet ([tracking ticket](https://github.com/paperlesspaper/paperlesspaper-firmware/issues/61)). Once that firmware ships, Paper 13/L devices updated to it will need to be read with the Paper 7 table instead, which will require a follow-up release once that firmware version is known. Until then, this mapping reflects the encoding confirmed by the vendor today. The raw integer is always available via the entity's `orientation_raw` attribute.
 
 ### HA Events
 

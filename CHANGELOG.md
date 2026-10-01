@@ -5,13 +5,22 @@ All notable changes to `paperlesspaper-ha` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.3] - 2026-10-01
 
 ### Fixed
 
 - `hassfest` validation failure with Home Assistant 2026.10: removed `aiohttp` from the manifest
   `requirements`. It is a dependency of Home Assistant itself and must not be listed by a custom
   integration.
+- `frame_orientation` reported the wrong rotation on firmware ≥ 3.x Paper 7 devices (e.g. `epd7`
+  device kind): the device vendor confirmed the raw `orient` value is encoded differently per
+  device model due to a difference in PCB alignment — our existing 4-state mapping was only
+  correct for Paper 13/L devices. The sensor now also detects the device's `kind` field and picks
+  the matching orientation table (Paper 7 vs Paper 13/L); an unrecognized `kind` on firmware ≥ 3.x
+  falls back to the Paper 13/L table and logs a one-time warning, mirroring the existing
+  unmapped-`orient`-value warning. Known limitation: the vendor plans a future firmware update
+  that unifies both models onto the Paper 7 table — this mapping will need a follow-up once that
+  firmware version is known. (Issue #34)
 
 ## [2.1.2] - 2026-09-30
 
