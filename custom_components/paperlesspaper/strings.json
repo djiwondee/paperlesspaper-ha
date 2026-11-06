@@ -105,6 +105,10 @@
         "reuse_existing_paper": {
           "name": "Reuse existing paper",
           "description": "If enabled (default), the existing paper ID is reused. If disabled, a new paper is created before uploading and its ID is saved as the new default for the selected device."
+        },
+        "pre_dithered": {
+          "name": "Pre-dithered image",
+          "description": "Enable if the image is already dithered for the display. It is uploaded as a device-ready image and the paperlesspaper server skips its own image processing. Leave off for normal photos."
         }
       }
     },
@@ -127,6 +131,10 @@
         "reuse_existing_paper": {
           "name": "Reuse existing paper",
           "description": "If enabled (default), the existing paper ID is reused. If disabled, a new paper is created before uploading and its ID is saved as the new default for the selected device."
+        },
+        "pre_dithered": {
+          "name": "Pre-dithered images",
+          "description": "Enable if the images are already dithered for the display. This applies to ALL images picked from the media folder, because the integration cannot check how they were created. The paperlesspaper server then skips its own image processing. Leave off for normal photos."
         }
       }
     }

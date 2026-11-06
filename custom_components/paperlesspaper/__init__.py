@@ -108,6 +108,15 @@
 #                    logged error and the raised HomeAssistantError message,
 #                    and both service handlers now fire a status: failed event
 #                    (image_uri = the failing file) before re-raising.
+# 2026-11-06  2.2.0  Issue #45: upload_image and upload_random_image got an
+#                    optional pre_dithered boolean. When true, the image bytes
+#                    are sent as the multipart file part pictureDevice instead
+#                    of picture so the backend does not process the image
+#                    itself (a text field pictureDevice=true is rejected with
+#                    HTTP 400). For upload_random_image the flag applies to
+#                    every image of the directory. Default behaviour is
+#                    unchanged. 4xx response bodies and the upload response
+#                    fields uploadFailed and reason are now logged.
 # =============================================================================
 
 from __future__ import annotations
@@ -375,6 +384,8 @@ async def _async_handle_upload_image(hass: HomeAssistant, call: ServiceCall) -> 
         media_content_id = media_raw
 
     reuse_existing_paper: bool = bool(call.data.get("reuse_existing_paper", True))
+    # Issue #45: tell the backend the image is already dithered.
+    pre_dithered: bool = bool(call.data.get("pre_dithered", False))
 
     target_device_ids = call.data.get("device_id", [])
     if isinstance(target_device_ids, str):
@@ -431,6 +442,7 @@ async def _async_handle_upload_image(hass: HomeAssistant, call: ServiceCall) -> 
         image_data, content_type, reuse_existing_paper,
         image_uri=media_content_id,
         action="upload_image",
+        pre_dithered=pre_dithered,
     )
 
 
@@ -465,6 +477,8 @@ async def _async_handle_upload_random_image(
     call.data["media_directory"]      : str — media-source:// URI (required)
     call.data["max_images"]           : int — 0 means "use all" (optional, default 0)
     call.data["reuse_existing_paper"] : bool (optional, default True)
+    call.data["pre_dithered"]         : bool (optional, default False) — applies
+                                        to EVERY image picked from the directory
     """
     media_directory: str = (call.data.get("media_directory") or "").strip()
     if not media_directory:
@@ -480,6 +494,9 @@ async def _async_handle_upload_random_image(
     max_images = max(max_images, 0)
 
     reuse_existing_paper: bool = bool(call.data.get("reuse_existing_paper", True))
+    # Issue #45: the integration cannot tell how the images were produced, so
+    # the flag is applied to every image picked from the directory.
+    pre_dithered: bool = bool(call.data.get("pre_dithered", False))
 
     target_device_ids = call.data.get("device_id", [])
     if isinstance(target_device_ids, str):
@@ -637,6 +654,7 @@ async def _async_handle_upload_random_image(
             image_data, content_type, reuse_existing_paper,
             image_uri=chosen_uri,
             action="upload_random_image",
+            pre_dithered=pre_dithered,
         )
 
         # ---------- 10. Persist updated history --------------------------
@@ -784,8 +802,13 @@ async def _upload_to_api(
     *,
     image_uri: str,
     action: str,
+    pre_dithered: bool = False,
 ) -> None:
     """Upload image bytes to the paperlesspaper API.
+
+    When pre_dithered is true, the bytes are sent as the multipart file part
+    pictureDevice (device-ready image the backend should not process itself,
+    Issue #45) instead of picture. Otherwise the request is unchanged.
 
     Retries up to 3 times with exponential backoff (5s, 15s, 30s) on transient
     failures (HTTP 408/429/502/503/504 and connection errors). Total worst-case
@@ -817,8 +840,12 @@ async def _upload_to_api(
             # FormData must be rebuilt for every attempt — aiohttp consumes
             # the underlying buffer on send, so a second use would fail.
             form = aiohttp.FormData()
+            # pictureDevice is a file part, not a text field: the API rejects
+            # it in the body schema ("Unrecognized key"). Verified on a real
+            # account that pictureDevice alone is accepted (Issue #45), so
+            # the bytes go out under exactly one of the two field names.
             form.add_field(
-                "picture",
+                "pictureDevice" if pre_dithered else "picture",
                 image_data,
                 filename="image.jpg",
                 content_type=content_type,
@@ -848,6 +875,16 @@ async def _upload_to_api(
                         "retry" if attempt < max_attempts else "give up",
                     )
                 else:
+                    if resp.status >= 400:
+                        # raise_for_status() discards the body, but the API
+                        # usually explains a 4xx there (e.g. wrong image
+                        # size/format for pictureDevice). Log it first.
+                        _LOGGER.error(
+                            "Upload to paper %s rejected with HTTP %s "
+                            "(pre_dithered=%s): %s",
+                            paper_id, resp.status, pre_dithered,
+                            (await resp.text())[:500],
+                        )
                     resp.raise_for_status()
                     result = await resp.json()
                     similarity = result.get("similarityPercentage")
@@ -855,13 +892,17 @@ async def _upload_to_api(
 
                     _LOGGER.info(
                         "Image uploaded to paper %s (device %s) on attempt %d: "
-                        "similarity=%.1f%% skipped=%s reuse_existing_paper=%s",
+                        "similarity=%.1f%% skipped=%s reuse_existing_paper=%s "
+                        "pre_dithered=%s upload_failed=%s reason=%s",
                         paper_id,
                         pp_device_id,
                         attempt,
                         similarity or 0,
                         skipped_upload,
                         reuse_existing_paper,
+                        pre_dithered,
+                        result.get("uploadFailed"),
+                        result.get("reason"),
                     )
 
                     # Fire success or skipped event based on the API's response.

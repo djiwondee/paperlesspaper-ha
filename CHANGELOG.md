@@ -5,6 +5,26 @@ All notable changes to `paperlesspaper-ha` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-11-06
+
+### Added
+
+- `upload_image` and `upload_random_image`: optional `pre_dithered` parameter (Issue #45). When
+  enabled, the image is uploaded as the multipart file part `pictureDevice` (device-ready image)
+  instead of `picture`, so the paperlesspaper backend skips its own image processing. For
+  `upload_random_image` it applies to every image of the media directory, since the integration
+  cannot tell how the images were created. Default behaviour is unchanged. Translations added
+  for all 7 languages.
+
+### Changed
+
+- `upload_random_image`: `max_images` is marked `required` in `services.yaml` so the action dialog
+  no longer shows a redundant "include field" checkbox next to it (the value `0` is the default
+  and the handler still treats the field as optional).
+- Upload log line now also reports the `uploadFailed` and `reason` fields of the API response.
+- HTTP 4xx responses of the upload endpoint now log the response body, which usually names the
+  reason (previously discarded).
+
 ## [2.1.4] - 2026-11-06
 
 Polish for the Home Assistant Marketplace (built in since Home Assistant 2026.11 as the successor

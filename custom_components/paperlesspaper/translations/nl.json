@@ -105,6 +105,10 @@
         "reuse_existing_paper": {
           "name": "Bestaand paper hergebruiken",
           "description": "Als ingeschakeld (standaard) wordt het bestaande paper-ID hergebruikt. Als uitgeschakeld wordt er vóór het uploaden een nieuw paper aangemaakt en het ID opgeslagen als standaard voor dit apparaat."
+        },
+        "pre_dithered": {
+          "name": "Vooraf geditherde afbeelding",
+          "description": "Schakel in als de afbeelding al is gedithered voor het scherm. Ze wordt geüpload als apparaatklare afbeelding en de paperlesspaper-server slaat zijn eigen beeldverwerking over. Laat uit voor gewone foto's."
         }
       }
     },
@@ -127,6 +131,10 @@
         "reuse_existing_paper": {
           "name": "Bestaand paper hergebruiken",
           "description": "Als ingeschakeld (standaard) wordt het bestaande paper-ID hergebruikt. Als uitgeschakeld wordt er vóór het uploaden een nieuw paper aangemaakt en het ID opgeslagen als standaard voor dit apparaat."
+        },
+        "pre_dithered": {
+          "name": "Vooraf geditherde afbeeldingen",
+          "description": "Schakel in als de afbeeldingen al zijn gedithered voor het scherm. Dit geldt voor ALLE afbeeldingen die uit de mediamap worden gekozen, omdat de integratie niet kan controleren hoe ze zijn gemaakt. De paperlesspaper-server slaat dan zijn eigen beeldverwerking over. Laat uit voor gewone foto's."
         }
       }
     }

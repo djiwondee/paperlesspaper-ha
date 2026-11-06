@@ -105,6 +105,10 @@
         "reuse_existing_paper": {
           "name": "Återanvänd befintligt paper",
           "description": "Om aktiverat (standard) återanvänds det befintliga paper-ID:t. Om inaktiverat skapas ett nytt paper före uppladdningen och dess ID sparas som standard för den här enheten."
+        },
+        "pre_dithered": {
+          "name": "Förditherad bild",
+          "description": "Aktivera om bilden redan är ditherad för skärmen. Den laddas upp som en enhetsfärdig bild och paperlesspaper-servern hoppar över sin egen bildbehandling. Låt vara avstängd för vanliga foton."
         }
       }
     },
@@ -127,6 +131,10 @@
         "reuse_existing_paper": {
           "name": "Återanvänd befintligt paper",
           "description": "Om aktiverat (standard) återanvänds det befintliga paper-ID:t. Om inaktiverat skapas ett nytt paper före uppladdningen och dess ID sparas som standard för den här enheten."
+        },
+        "pre_dithered": {
+          "name": "Förditherade bilder",
+          "description": "Aktivera om bilderna redan är ditherade för skärmen. Detta gäller ALLA bilder som väljs från mediamappen, eftersom integrationen inte kan kontrollera hur de har skapats. paperlesspaper-servern hoppar då över sin egen bildbehandling. Låt vara avstängd för vanliga foton."
         }
       }
     }
