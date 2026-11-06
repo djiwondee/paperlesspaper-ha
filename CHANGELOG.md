@@ -5,6 +5,23 @@ All notable changes to `paperlesspaper-ha` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Planned as `2.1.4`. Polish for the Home Assistant Marketplace (built in since Home Assistant
+2026.11 as the successor of HACS). No integration code or behaviour changed.
+
+### Changed
+
+- `hacs.json`: declared the minimum Home Assistant version (`2026.3.0`) that the README already
+  states, so the Marketplace and HACS refuse an install on older versions instead of letting it
+  fail at runtime. Removed `render_readme`, which the Marketplace ignores.
+- README: Marketplace badge and install section (2026.11 and newer) with the
+  `marketplace_repository` My Home Assistant button, a note for users coming from HACS, and the
+  HACS steps kept for Home Assistant 2026.3 to 2026.10. Prerequisites no longer require HACS on
+  2026.11 and newer.
+- `validate.yml`: comments now name the Marketplace catalog; the jobs are unchanged.
+- Version bumped to `2.1.4`.
+
 ## [2.1.3] - 2026-10-01
 
 ### Fixed

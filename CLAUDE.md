@@ -4,14 +4,21 @@ Persistent project context for Claude Code. Read this file first in every sessio
 
 ## Project Purpose
 
-- `paperlesspaper-ha` is a HACS-compatible Home Assistant custom integration.
+- `paperlesspaper-ha` is a Home Assistant custom integration, distributed through the Home Assistant
+  Marketplace (built into HA since 2026.11 as the successor of HACS; same `hacs/default` catalog,
+  same `hacs.json`, same `hacs/action` checks) and through HACS on older HA versions.
+- `hacs.json` declares the minimum HA version (`2026.3.0`); the Marketplace enforces it before
+  installing. `render_readme` is not read by the Marketplace and was removed in 2.1.4. Keep
+  releases source-based unless deliberately decided otherwise: `zip_release` changes how every
+  version is downloaded and needs a release asset per tag.
 - Connects HA to the **paperlesspaper** ePaper picture frame ecosystem via the cloud API
   `https://api.paperlesspaper.de/v1` (auth header: `x-api-key`).
 - Maintainer: Roland (GitHub: `djiwondee`). Roland has direct contact with the paperlesspaper
   manufacturer's dev team.
 - **No relation to Paperless-ngx** (the document management system). Never research, cite, or
   reference Paperless-ngx sources — they are irrelevant and confusing false positives.
-- Accepted into the official HACS default store. Current stable release: **v2.1.3**.
+- Accepted into the official HACS default store, which is the catalog the Marketplace shows.
+  Current stable release: **v2.1.3** (2.1.4, Marketplace polish only, in preparation).
 
 ## Session Workflow (applies to every new chat/session on this project)
 

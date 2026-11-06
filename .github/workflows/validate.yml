@@ -2,7 +2,8 @@
 # validate.yml
 # -----------------------------------------------------------------------------
 # Runs HACS validation and Home Assistant hassfest on every push and PR.
-# Required for HACS Default Store submission.
+# Required for the hacs/default catalog, which the Home Assistant Marketplace
+# (built in since HA 2026.11) and HACS both read.
 #
 # Jobs:
 #   validate-hacs     — same checks HACS itself uses (hacs/action)
@@ -18,6 +19,8 @@
 # CHANGE HISTORY
 # 2026-05-18  1.0.1  Initial CI setup.
 #                    Pinned actions/checkout to v4.2.2 (Node.js 24 compatible).
+# 2026-11-06  2.1.4  Comments updated for the Home Assistant Marketplace, which
+#                    uses the same catalog and hacs/action checks. Jobs unchanged.
 # =============================================================================
 
 name: Validate
@@ -36,7 +39,7 @@ jobs:
   # ---------------------------------------------------------------------------
   # Job 1: HACS repository validation
   # Uses the official hacs/action — runs the same validation HACS itself uses.
-  # Must pass without errors or ignores for HACS Default Store submission.
+  # Must pass without errors or ignores to stay in the hacs/default catalog.
   # ---------------------------------------------------------------------------
   validate-hacs:
     name: HACS Validation
