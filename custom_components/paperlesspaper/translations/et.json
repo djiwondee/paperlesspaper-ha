@@ -105,6 +105,10 @@
         "reuse_existing_paper": {
           "name": "Kasuta olemasolevat paberit",
           "description": "Kui lubatud (vaikimisi), kasutatakse olemasolevat paberi ID-d uuesti. Kui keelatud, luuakse enne üleslaadimist uus paber ja selle ID salvestatakse selle seadme vaikeväärtusena."
+        },
+        "pre_dithered": {
+          "name": "Eeltöödeldud (dithered) pilt",
+          "description": "Lülita sisse, kui pilt on ekraani jaoks juba dithering-töödeldud. See laaditakse üles seadmevalmis pildina ja paperlesspaper server jätab oma pilditöötluse vahele. Tavaliste fotode puhul jäta välja lülitatuks."
         }
       }
     },
@@ -127,6 +131,10 @@
         "reuse_existing_paper": {
           "name": "Kasuta olemasolevat paberit",
           "description": "Kui lubatud (vaikimisi), kasutatakse olemasolevat paberi ID-d uuesti. Kui keelatud, luuakse enne üleslaadimist uus paber ja selle ID salvestatakse selle seadme vaikeväärtusena."
+        },
+        "pre_dithered": {
+          "name": "Eeltöödeldud (dithered) pildid",
+          "description": "Lülita sisse, kui pildid on ekraani jaoks juba dithering-töödeldud. See kehtib KÕIGILE meediakaustast valitud piltidele, sest integratsioon ei saa kontrollida, kuidas need on loodud. paperlesspaper server jätab siis oma pilditöötluse vahele. Tavaliste fotode puhul jäta välja lülitatuks."
         }
       }
     }

@@ -36,6 +36,17 @@ upload_image:
       example: true
       selector:
         boolean:
+    pre_dithered:
+      name: Pre-dithered image
+      description: >
+        Enable if the image is already dithered for the display. It is
+        uploaded as a device-ready image and the paperlesspaper server skips
+        its own image processing. Leave off for normal photos.
+      required: true
+      default: false
+      example: false
+      selector:
+        boolean:
 
 upload_random_image:
   name: Upload random image
@@ -71,7 +82,9 @@ upload_random_image:
         Maximum number of images from the directory to include in the
         rotation pool. 0 (default) means use all images. Useful when the
         directory contains many images but you only want, e.g., 24 of them.
-      required: false
+      # required: true only hides the "include field" checkbox the frontend
+      # shows for falsy defaults; the handler still treats it as optional.
+      required: true
       default: 0
       example: 24
       selector:
@@ -88,5 +101,18 @@ upload_random_image:
       required: false
       default: true
       example: true
+      selector:
+        boolean:
+    pre_dithered:
+      name: Pre-dithered images
+      description: >
+        Enable if the images are already dithered for the display. This
+        applies to ALL images picked from the media folder, because the
+        integration cannot check how they were created. The paperlesspaper
+        server then skips its own image processing. Leave off for normal
+        photos.
+      required: true
+      default: false
+      example: false
       selector:
         boolean:

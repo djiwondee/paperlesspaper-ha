@@ -18,7 +18,7 @@ Persistent project context for Claude Code. Read this file first in every sessio
 - **No relation to Paperless-ngx** (the document management system). Never research, cite, or
   reference Paperless-ngx sources — they are irrelevant and confusing false positives.
 - Accepted into the official HACS default store, which is the catalog the Marketplace shows.
-  Current stable release: **v2.1.4** (Marketplace polish only, no code change since v2.1.3).
+  Current stable release: **v2.2.0** (adds the `pre_dithered` upload option, Issue #45).
 
 ## Session Workflow (applies to every new chat/session on this project)
 
@@ -180,6 +180,10 @@ codebase and must not proceed carelessly.
   confirmed, not officially guaranteed; re-verify if it ever stops showing up. Used by
   `PaperlessOrientationSensor._resolve_map()` (sensor.py) for the Paper 7 vs Paper 13/L
   orientation mapping — see Open Issues below.
+- `uploadSingleImage` `pictureDevice` must be sent as a **file** part: as a text field the API's strict
+  Zod body schema rejects it (HTTP 400 "Unrecognized key"). `pictureDevice` alone (without `picture`) is
+  accepted and shows up in the cloud library (verified live, Issue #45). Postman uploads were unreliable
+  for this test (corrupt/unreadable on the frame) — verify through the integration or curl instead.
 - `meta` key may be absent on freshly re-registered devices — always guard with `.get()` / `or {}`.
 - `DeviceInfo.serial_number` must come from `deviceId` — there is no `serial_number` field in the
   API.
@@ -196,12 +200,16 @@ codebase and must not proceed carelessly.
 - HACS icon shows correctly in HA Settings → Devices & Services but not in HACS's own UI — this is
   a known HACS-side bug (hacs/integration#5171, #5223), not something to "fix" in this repo.
 
-## Current State (v2.1.4, functionally identical to v2.1.3)
+## Current State (v2.2.0)
 
 - Dynamic device discovery + auto re-linking via stable `deviceId`.
 - `OrphanedDeviceRepairFlow` (Delete / manual Relink) + `async_remove_config_entry_device`.
 - `upload_image` action (`reuse_existing_paper`, default `true`) with coordinator refresh; paper
   creation always forced on first setup.
+- `pre_dithered` option on both upload actions (v2.2.0, Issue #45): sends the bytes as the multipart
+  **file** part `pictureDevice` instead of `picture`. For `upload_random_image` it applies to every image
+  of the directory. `required: true` + `default: false/0` in `services.yaml` only hides the frontend's
+  "include field" checkbox for falsy defaults; there is no service schema, so handlers stay optional.
 - `upload_random_image` action: media-source directory, per-(device, directory) rotation history,
   cross-device duplicate avoidance, `asyncio.Lock`, retry/backoff, HEIC/HEIF excluded; history
   reset available in Options Flow.

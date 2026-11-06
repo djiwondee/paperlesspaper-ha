@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
 [![Marketplace Default](https://img.shields.io/badge/Marketplace-Default-blue.svg)](https://www.home-assistant.io/integrations/marketplace/)
-[![Version](https://img.shields.io/badge/version-2.1.4-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Validate](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml)
@@ -300,6 +300,13 @@ Upload a specific image to an ePaper display. Each call uploads exactly the pict
 | `device_id` | Yes | — | The paperlesspaper device to upload to |
 | `media_content_id` | Yes | — | Image selected via the HA Media Picker, or a direct `https://` URL |
 | `reuse_existing_paper` | No | `true` | When enabled (default), the existing paper slot is reused. When disabled, a new paper is created before uploading and saved as the new default for this device |
+| `pre_dithered` | No | `false` | Enable if the image is already dithered for the display. It is uploaded as a device-ready image and the paperlesspaper server skips its own image processing. See [pre_dithered](#pre_dithered) |
+
+#### pre_dithered
+
+By default the paperlesspaper server converts every uploaded picture for the ePaper display (resizing, rotation, dithering to the panel's colors). If you produce device-ready images yourself — for example with your own dithering software — enable **Pre-dithered images** so the image is uploaded as the API's device-ready `pictureDevice` file instead of the regular `picture` and is not processed again. Leave it off for normal photos.
+
+> **Note:** The integration cannot verify that an image really is device-ready. Only enable the option for images that match what your frame expects (pixel size, orientation, color palette).
 
 #### reuse_existing_paper
 
@@ -341,6 +348,7 @@ This is the typical building block for a slideshow automation: *"every hour, sho
 | `media_directory` | Yes | — | The media library folder to cycle through, given as a `media-source://` URI. See [Finding the right media_directory URI](#finding-the-right-media_directory-uri) below |
 | `max_images` | No | `0` (= all) | Maximum number of images from the folder to include in the rotation pool. Useful when the folder contains hundreds of images but you only want to cycle through, e.g., 24 of them. If the folder contains fewer images than `max_images`, the cap is silently ignored and all images are used |
 | `reuse_existing_paper` | No | `true` | Same behaviour as in `upload_image` |
+| `pre_dithered` | No | `false` | Same as in `upload_image`, but applied to **all** images picked from the folder, because the integration cannot check how they were created. Only enable it if every image in `media_directory` is already dithered for the display |
 
 > **Note:** Unlike `upload_image`, this action does **not** show the HA media picker for picking a single file. You enter the **folder URI once** in the action configuration; the integration then picks images from that folder automatically on every call.
 

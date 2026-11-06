@@ -105,6 +105,10 @@
         "reuse_existing_paper": {
           "name": "Réutiliser le papier existant",
           "description": "Si activé (par défaut), l'identifiant de papier existant est réutilisé. Si désactivé, un nouveau papier est créé avant le téléversement et son identifiant est enregistré comme valeur par défaut pour cet appareil."
+        },
+        "pre_dithered": {
+          "name": "Image déjà tramée",
+          "description": "À activer si l'image est déjà tramée (dithering) pour l'écran. Elle est envoyée comme image prête pour l'appareil et le serveur paperlesspaper n'applique pas son propre traitement d'image. À laisser désactivé pour les photos normales."
         }
       }
     },
@@ -127,6 +131,10 @@
         "reuse_existing_paper": {
           "name": "Réutiliser le papier existant",
           "description": "Si activé (par défaut), l'identifiant de papier existant est réutilisé. Si désactivé, un nouveau papier est créé avant le téléversement et son identifiant est enregistré comme valeur par défaut pour cet appareil."
+        },
+        "pre_dithered": {
+          "name": "Images déjà tramées",
+          "description": "À activer si les images sont déjà tramées (dithering) pour l'écran. Cela s'applique à TOUTES les images choisies dans le dossier multimédia, car l'intégration ne peut pas vérifier comment elles ont été créées. Le serveur paperlesspaper n'applique alors pas son propre traitement d'image. À laisser désactivé pour les photos normales."
         }
       }
     }

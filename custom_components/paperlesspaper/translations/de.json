@@ -105,6 +105,10 @@
         "reuse_existing_paper": {
           "name": "Vorhandenes Paper wiederverwenden",
           "description": "Wenn aktiviert (Standard), wird die vorhandene Paper-ID wiederverwendet. Wenn deaktiviert, wird vor dem Hochladen ein neues Paper erstellt und dessen ID als neuer Standard für das ausgewählte Gerät gespeichert."
+        },
+        "pre_dithered": {
+          "name": "Bereits gedithertes Bild",
+          "description": "Aktivieren, wenn das Bild bereits für das Display gedithert wurde. Es wird als gerätefertiges Bild hochgeladen, und der paperlesspaper-Server führt keine eigene Bildverarbeitung durch. Für normale Fotos ausgeschaltet lassen."
         }
       }
     },
@@ -127,6 +131,10 @@
         "reuse_existing_paper": {
           "name": "Vorhandenes Paper wiederverwenden",
           "description": "Wenn aktiviert (Standard), wird die vorhandene Paper-ID wiederverwendet. Wenn deaktiviert, wird vor dem Hochladen ein neues Paper erstellt und dessen ID als neuer Standard für das ausgewählte Gerät gespeichert."
+        },
+        "pre_dithered": {
+          "name": "Bereits geditherte Bilder",
+          "description": "Aktivieren, wenn die Bilder bereits für das Display gedithert wurden. Das gilt für ALLE Bilder, die aus dem Medienordner ausgewählt werden, da die Integration nicht prüfen kann, wie sie erzeugt wurden. Der paperlesspaper-Server führt dann keine eigene Bildverarbeitung durch. Für normale Fotos ausgeschaltet lassen."
         }
       }
     }
