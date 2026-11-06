@@ -1,7 +1,7 @@
 # paperlesspaper ePaper Display Integration for Home Assistant
 
-[![HACS Default](https://img.shields.io/badge/HACS-Default-blue.svg)](https://github.com/hacs/default)
-[![Version](https://img.shields.io/badge/version-2.1.3-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
+[![Marketplace Default](https://img.shields.io/badge/Marketplace-Default-blue.svg)](https://www.home-assistant.io/integrations/marketplace/)
+[![Version](https://img.shields.io/badge/version-2.1.4-blue.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen.svg)](https://github.com/djiwondee/paperlesspaper-ha/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Validate](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml/badge.svg)](https://github.com/djiwondee/paperlesspaper-ha/actions/workflows/validate.yml)
@@ -42,7 +42,7 @@ Before installing this integration you need:
 2. An API key — generate one at [paperlesspaper.de/posts/api](https://paperlesspaper.de/posts/api)
 3. *(Optional)* A name for your group (organization) in the paperlesspaper app. New groups may be created without a name — if none is set, the integration will assign a placeholder name automatically (e.g. *Frame Hub*, *Gallery Hub*). You can rename the integration entry in Home Assistant afterwards at any time.
 4. Home Assistant 2026.3 or newer
-5. HACS installed in your Home Assistant instance
+5. On Home Assistant 2026.3 to 2026.10: HACS installed in your Home Assistant instance. From 2026.11 on nothing extra is needed, the Marketplace is built in.
 
 > **Important:** This integration requires your device to be set up in the paperlesspaper app first. New devices cannot be registered through Home Assistant.
 
@@ -50,9 +50,21 @@ Before installing this integration you need:
 
 ## Installation
 
-### Via HACS (recommended)
+### Via the Marketplace (recommended, Home Assistant 2026.11 and newer)
 
-This integration is listed directly in the **HACS default store** — no need to add it as a custom repository anymore.
+Since 2026.11, Home Assistant ships the former HACS store built in, under **Settings → Marketplace**. This integration is listed in its default catalog, so you don't need a custom repository or a GitHub account.
+
+[![Open this repository in the Marketplace of your Home Assistant instance.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=djiwondee&repository=paperlesspaper-ha&category=integration)
+
+1. Click the button above, or open **Settings → Marketplace** and search for **paperlesspaper**
+2. Install it and confirm the Marketplace's one-time community-code warning
+3. Go to **Settings → Devices & Services → Add Integration** and search for **paperlesspaper**. A first install loads without a restart; after an update, Home Assistant asks for a restart through a repair notice.
+
+**Coming from HACS?** Nothing to do. On the first start of 2026.11 the Marketplace takes over the installed integration and its update entity, and keeps updating it.
+
+### Via HACS (Home Assistant 2026.3 to 2026.10)
+
+This integration is listed directly in the **HACS default store** — no need to add it as a custom repository.
 
 1. Open HACS in Home Assistant
 2. Go to **Integrations**
