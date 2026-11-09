@@ -143,6 +143,11 @@
 #                      client errors) instead of aborting the poll.
 #                    - _async_update_data: any remaining TimeoutError becomes a
 #                      descriptive UpdateFailed.
+# 2026-11-09  2.1.5  _async_update_data: build the pp_device_id -> HA device_id
+#                    map with dr.async_entries_for_config_entry() instead of
+#                    iterating device_registry.devices.values(); using the
+#                    registry's devices attribute as a mapping is deprecated
+#                    and stops working in Home Assistant 2027.9.0.
 # =============================================================================
 
 from __future__ import annotations
@@ -1005,7 +1010,12 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         # so _process_device_events can attach the correct device_id to events.
         device_registry = dr.async_get(self.hass)
         ha_device_id_map: dict[str, str] = {}
-        for ha_device in device_registry.devices.values():
+        # Only this config entry's devices are relevant; the helper avoids the
+        # deprecated mapping access on device_registry.devices (removed in
+        # Home Assistant 2027.9.0).
+        for ha_device in dr.async_entries_for_config_entry(
+            device_registry, self.entry.entry_id
+        ):
             for identifier_tuple in ha_device.identifiers:
                 # Use positional access instead of tuple unpacking — the
                 # identifiers tuple may contain more than 2 elements in some
