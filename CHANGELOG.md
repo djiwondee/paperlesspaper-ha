@@ -25,6 +25,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - HTTP 4xx responses of the upload endpoint now log the response body, which usually names the
   reason (previously discarded).
 
+## [2.1.5] - 2026-11-09
+
+### Fixed
+
+- Device lookup in the coordinator no longer uses `device_registry.devices` as a mapping
+  (`.values()`), which Home Assistant deprecated and will stop supporting in 2027.9.0. It now uses
+  `async_entries_for_config_entry()`, which also limits the loop to this integration's devices.
+
 ## [2.1.4] - 2026-11-06
 
 Polish for the Home Assistant Marketplace (built in since Home Assistant 2026.11 as the successor
