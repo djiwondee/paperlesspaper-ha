@@ -18,7 +18,10 @@ Persistent project context for Claude Code. Read this file first in every sessio
 - **No relation to Paperless-ngx** (the document management system). Never research, cite, or
   reference Paperless-ngx sources — they are irrelevant and confusing false positives.
 - Accepted into the official HACS default store, which is the catalog the Marketplace shows.
-  Current stable release: **v2.2.0** (adds the `pre_dithered` upload option, Issue #45).
+  Current stable release: **v2.1.5** (device registry deprecation fix). **2.2.0 is not released
+  yet**: `main` already carries it (`manifest.json` = 2.2.0, `pre_dithered` upload option, Issue
+  #45), but it is only available as the pre-release `v2.2.0b` until the `pictureDevice` behaviour
+  is clarified with the manufacturer (paperlesspaper-web#180).
 
 ## Session Workflow (applies to every new chat/session on this project)
 
@@ -200,7 +203,7 @@ codebase and must not proceed carelessly.
 - HACS icon shows correctly in HA Settings → Devices & Services but not in HACS's own UI — this is
   a known HACS-side bug (hacs/integration#5171, #5223), not something to "fix" in this repo.
 
-## Current State (v2.2.0)
+## Current State (v2.1.5 stable, 2.2.0 unreleased on `main`)
 
 - Dynamic device discovery + auto re-linking via stable `deviceId`.
 - `OrphanedDeviceRepairFlow` (Delete / manual Relink) + `async_remove_config_entry_device`.

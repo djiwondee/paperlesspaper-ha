@@ -5,7 +5,11 @@ All notable changes to `paperlesspaper-ha` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.2.0] - 2026-11-06
+## [Unreleased]
+
+Planned as 2.2.0 (`manifest.json` already carries that version). Not released as a stable version
+yet: the `pre_dithered` option is only available in the pre-release `v2.2.0b`, because the
+paperlesspaper backend/firmware behaviour for `pictureDevice` is still unclear (Issue #45).
 
 ### Added
 
