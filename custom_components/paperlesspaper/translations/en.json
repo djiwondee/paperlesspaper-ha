@@ -169,6 +169,9 @@
           "portrait_upside_down": "Portrait (upside-down)",
           "unknown": "Unknown"
         }
+      },
+      "last_wakeup": {
+        "name": "Last wake-up"
       }
     },
     "binary_sensor": {

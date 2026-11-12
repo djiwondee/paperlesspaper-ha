@@ -5,7 +5,13 @@ All notable changes to `paperlesspaper-ha` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.2.0] - 2026-11-06
+## [Unreleased]
+
+Planned as 2.2.0 (`manifest.json` already carries that version). Not released as a stable version
+yet: the `pre_dithered` option is only available in the pre-release `v2.2.0b`, because the
+paperlesspaper backend/firmware behaviour for `pictureDevice` is still unclear (Issue #45).
+Pre-release `v2.2.0b1` adds the startup seeding of the event sensors and the "Last wake-up"
+sensor on top of `v2.2.0b`.
 
 ### Added
 
@@ -15,6 +21,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `upload_random_image` it applies to every image of the media directory, since the integration
   cannot tell how the images were created. Default behaviour is unchanged. Translations added
   for all 7 languages.
+- Frame orientation and WiFi signal sensors are filled right after startup (HA restart or
+  integration reload) instead of only after the frame's next wake-up. On the first poll per
+  device the integration silently looks up the newest `activate` event of the last 24 hours, then
+  up to 7 days. This fires no `paperlesspaper_device_woke_up` events and writes no logbook
+  entries; normal event polling continues unchanged.
+- New diagnostic sensor "Last wake-up": time of the frame's newest `activate` event, the event the
+  orientation and WiFi signal values come from. It shows how old those values are, e.g. after the
+  frame was offline for a while or was rotated while offline (the new orientation only shows up
+  with the next wake-up). Translations added for all 7 languages.
 
 ### Changed
 

@@ -169,6 +169,9 @@
           "portrait_upside_down": "Na výšku (vzhůru nohama)",
           "unknown": "Neznámá"
         }
+      },
+      "last_wakeup": {
+        "name": "Poslední probuzení"
       }
     },
     "binary_sensor": {

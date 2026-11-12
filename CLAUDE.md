@@ -18,7 +18,11 @@ Persistent project context for Claude Code. Read this file first in every sessio
 - **No relation to Paperless-ngx** (the document management system). Never research, cite, or
   reference Paperless-ngx sources — they are irrelevant and confusing false positives.
 - Accepted into the official HACS default store, which is the catalog the Marketplace shows.
-  Current stable release: **v2.2.0** (adds the `pre_dithered` upload option, Issue #45).
+  Current stable release: **v2.1.5** (device registry deprecation fix). **2.2.0 is not released
+  yet**: `main` already carries it (`manifest.json` = 2.2.0, `pre_dithered` upload option, Issue
+  #45), but it is only available as the pre-releases `v2.2.0b` and `v2.2.0b1` (adds startup
+  seeding of the event sensors + "Last wake-up" sensor, branch `feat/initial-event-seeding`) until
+  the `pictureDevice` behaviour is clarified with the manufacturer (paperlesspaper-web#180).
 
 ## Session Workflow (applies to every new chat/session on this project)
 
@@ -200,7 +204,7 @@ codebase and must not proceed carelessly.
 - HACS icon shows correctly in HA Settings → Devices & Services but not in HACS's own UI — this is
   a known HACS-side bug (hacs/integration#5171, #5223), not something to "fix" in this repo.
 
-## Current State (v2.2.0)
+## Current State (v2.1.5 stable, 2.2.0 unreleased on `main`)
 
 - Dynamic device discovery + auto re-linking via stable `deviceId`.
 - `OrphanedDeviceRepairFlow` (Delete / manual Relink) + `async_remove_config_entry_device`.
@@ -219,10 +223,14 @@ codebase and must not proceed carelessly.
   (media resolution, local file read, HTTP fetch) also fire `status: failed` now (Issue #35), naming
   the failing `media_content_id`/URL in both the log and the event — previously only failures inside
   `_upload_to_api` fired an event at all.
-- Sensors: battery, next sync, sleep time (+ predict diagnostic), wifi signal, frame orientation
-  (firmware- and device-model-aware as of v2.1.3 — interim mapping, see Open Issues below),
-  picture synced, last wakeup, wake reason, last update state. Binary sensors: reachable, update
-  pending. Buttons: reboot, reset sensors.
+- Sensors: battery level + voltage, next sync, sleep time (+ predict diagnostic), wifi signal,
+  frame orientation (firmware- and device-model-aware as of v2.1.3 — interim mapping, see Open
+  Issues below), last wake-up (diagnostic, 2.2.0). Binary sensors: reachable, picture synced,
+  update pending. Buttons: reboot, reset sensors.
+- wifi signal, frame orientation and last wake-up come only from `activate` events
+  (`_event_sensor_cache`). Since 2.2.0 they are silently seeded on the first poll after
+  startup/reload from the newest `activate` of the last 24 h, then 7 days
+  (`_seed_event_sensor_cache`): no bus events, no logbook entries.
 - Full Repairs flow, reconfigure flow, complete 7-language translation coverage.
 
 ## Open Issues / On the Horizon

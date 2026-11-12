@@ -169,6 +169,9 @@
           "portrait_upside_down": "Staand (ondersteboven)",
           "unknown": "Onbekend"
         }
+      },
+      "last_wakeup": {
+        "name": "Laatst ontwaakt"
       }
     },
     "binary_sensor": {
