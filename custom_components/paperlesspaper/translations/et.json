@@ -169,6 +169,9 @@
           "portrait_upside_down": "Portree (peapeal)",
           "unknown": "Tundmatu"
         }
+      },
+      "last_wakeup": {
+        "name": "Viimane ärkamine"
       }
     },
     "binary_sensor": {

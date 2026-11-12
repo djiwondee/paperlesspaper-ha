@@ -169,6 +169,9 @@
           "portrait_upside_down": "Hochformat (auf dem Kopf)",
           "unknown": "Unbekannt"
         }
+      },
+      "last_wakeup": {
+        "name": "Letztes Aufwachen"
       }
     },
     "binary_sensor": {

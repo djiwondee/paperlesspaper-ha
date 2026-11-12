@@ -76,6 +76,12 @@
 #                    devices onto the Paper 7 table too (no version number
 #                    yet) - this mapping will need a firmware-version-bounded
 #                    follow-up once that ships. (Issue #34)
+# 2026-11-11  2.2.0  Docstrings of PaperlessWifiRssiSensor and
+#                    PaperlessOrientationSensor mention the coordinator's
+#                    silent startup seeding of both values (no logic change).
+#                    New PaperlessLastWakeupSensor (diagnostic timestamp,
+#                    translation key last_wakeup): time of the newest activate
+#                    event, i.e. how old orientation / WiFi values are.
 # =============================================================================
 
 from __future__ import annotations
@@ -160,6 +166,7 @@ def _sensors_for_device(
         PaperlessSleepTimePredictSensor(coordinator, device),
         PaperlessWifiRssiSensor(coordinator, device),
         PaperlessOrientationSensor(coordinator, device),
+        PaperlessLastWakeupSensor(coordinator, device),
     ]
 
 
@@ -314,6 +321,37 @@ class PaperlessNextSyncSensor(PaperlessBaseSensor):
         return self._device.get("next_device_sync")
 
 
+class PaperlessLastWakeupSensor(PaperlessBaseSensor):
+    """Sensor: time of the frame's newest activate (wake-up) event.
+
+    Populated by the coordinator into the device dict field 'last_wakeup',
+    both by the silent startup seeding (_seed_event_sensor_cache, newest
+    activate of the last 24 h / 7 days) and by regular event polling.
+
+    Shows how old the orientation and WiFi signal values are — both come
+    from the same activate event. A frame that was offline (or rotated
+    while offline) only reports again with its next wake-up, so an old
+    timestamp here means those values may be stale. Returns None if no
+    activate event was found within 7 days.
+    """
+
+    _field = "last_wakeup"
+    _attr_icon = "mdi:clock-check-outline"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: PaperlessCoordinator, device: dict) -> None:
+        """Initialize."""
+        super().__init__(coordinator, device, "last_wakeup", "last_wakeup")
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the last wake-up as a timezone-aware datetime (UTC)."""
+        if self._device is None:
+            return None
+        return self._device.get("last_wakeup")
+
+
 class PaperlessSleepTimeSensor(PaperlessBaseSensor):
     """Sensor: configured sleep interval in seconds."""
 
@@ -348,9 +386,13 @@ class PaperlessWifiRssiSensor(PaperlessBaseSensor):
     Updated on every device wake-up cycle when the activate event is received
     via GET /devices/events. The value is populated by the coordinator's
     _process_device_events() method into the device dict field 'wifi_rssi'.
+    On startup the coordinator silently seeds the value from the newest
+    activate event of the last 24 h / 7 days (_seed_event_sensor_cache).
 
     Typical range: -30 dBm (excellent) to -90 dBm (very weak).
-    Returns None between the initial setup and the first wake-up event.
+    Returns None only if no activate event was found within 7 days, until
+    the next wake-up event. The "Last wake-up" sensor shows how old the
+    value is.
 
     Note: device_class is intentionally omitted. SensorDeviceClass.SIGNAL_STRENGTH
     causes HA to override the entity name with its own built-in translation
@@ -390,6 +432,10 @@ class PaperlessOrientationSensor(PaperlessBaseSensor):
     Updated on every device wake-up cycle when the activate event is received
     via GET /devices/events. The value is populated by the coordinator's
     _process_device_events() method into the device dict field 'orientation'.
+    On startup the coordinator silently seeds the value from the newest
+    activate event of the last 24 h / 7 days (_seed_event_sensor_cache).
+    The "Last wake-up" sensor shows how old the value is — a frame rotated
+    while offline only reports its new orientation with the next wake-up.
 
     The raw 'orient' encoding differs by firmware generation AND, for
     firmware 3.x, by device model/hardware (Issue #34):

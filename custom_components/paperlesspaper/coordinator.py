@@ -148,6 +148,25 @@
 #                    iterating device_registry.devices.values(); using the
 #                    registry's devices attribute as a mapping is deprecated
 #                    and stops working in Home Assistant 2027.9.0.
+# 2026-11-11  2.2.0  Silent seeding of the event sensor cache on startup:
+#                    - _seed_event_sensor_cache(): on the first poll per device
+#                      (in-memory _event_seed_done set, so every HA restart or
+#                      integration reload seeds again) looks back 24 h, then
+#                      the older slice up to 7 days (_SEED_WINDOWS_SECONDS),
+#                      and fills _event_sensor_cache with orientation and
+#                      wifi_rssi from the newest activate event. Fires no bus
+#                      events, writes no logbook entries and leaves
+#                      _last_event_poll_ts untouched. Runs independent of the
+#                      ping's reachable flag. Previously both sensors stayed
+#                      unknown until the frame's next wake-up after a restart.
+#                    - _fetch_device_events(): optional until_ts_ms (DateEnd)
+#                      and returns None instead of [] on HTTP/client/timeout
+#                      errors so seeding can retry on the next poll.
+#                      _process_device_events() behaviour is unchanged.
+#                    - _event_sensor_cache additionally stores last_wakeup
+#                      (UTC datetime of the newest activate event), written by
+#                      both the seeding and _process_device_events(), for the
+#                      new diagnostic "Last wake-up" sensor.
 # =============================================================================
 
 from __future__ import annotations
@@ -196,6 +215,13 @@ _RETRYABLE_HTTP_STATUSES = frozenset({408, 429, 502, 503, 504})
 # because the coordinator should not block too long — sensors would simply
 # refresh on the next poll cycle. Total worst-case wait: 5 + 15 = 20 seconds.
 _FETCH_RETRY_BACKOFF_SECONDS = (5, 15)
+
+# Look-back windows (seconds) for the one-time silent seeding of the event
+# sensor cache after startup. Each stage only fetches the older slice not
+# covered by the previous one. The first window must exceed the frame's
+# longest sleep interval (1 day), otherwise a sleeping frame has no activate
+# event in it; the 7-day stage covers frames that were offline for a while.
+_SEED_WINDOWS_SECONDS = (86400, 7 * 86400)
 
 # Hard upper bound for any single backoff wait in the coordinator. Lower than
 # the upload cap because the next poll cycle will give us another chance.
@@ -272,6 +298,11 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         # after restart uses now minus one poll interval as anchor, preventing
         # gaps without re-fetching the full event history.
         self._last_event_poll_ts: dict[str, int | None] = {}
+
+        # Devices whose event sensor cache has already been seeded from the
+        # event history in this session (see _seed_event_sensor_cache).
+        # Intentionally in memory only: every restart/reload seeds again.
+        self._event_seed_done: set[str] = set()
 
         # Tracks consecutive coordinator cycles in which a previously known
         # device (present in the HA device registry for this entry) was
@@ -704,13 +735,19 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         return int((time.time() - polling_interval) * 1000)
 
     async def _fetch_device_events(
-        self, device_id: str, since_ts_ms: int
-    ) -> list[dict]:
+        self,
+        device_id: str,
+        since_ts_ms: int,
+        until_ts_ms: int | None = None,
+    ) -> list[dict] | None:
         """Fetch device events from the API since the given timestamp.
 
         Uses the DateStart query parameter to limit results to events that
-        occurred after the last poll. Returns an empty list on any error so
-        that a failed event fetch never interrupts the main poll cycle.
+        occurred after the last poll. DateEnd defaults to now; until_ts_ms
+        sets an earlier end (used by the startup seeding to fetch older
+        slices only). Returns [] when the window has no events and None on
+        any error, so a failed event fetch never interrupts the main poll
+        cycle while callers can still tell "no events" from "API failed".
 
         The API endpoint: GET /devices/events/{deviceId}?DateStart=<ISO8601>
 
@@ -726,7 +763,8 @@ class PaperlessCoordinator(DataUpdateCoordinator):
         # because the API's DateStart filter is inclusive at second granularity.
         since_dt = datetime.fromtimestamp(since_ts_ms / 1000, tz=UTC)
         since_iso = since_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-        now_iso = datetime.fromtimestamp(time.time(), tz=UTC).strftime(
+        end_s = time.time() if until_ts_ms is None else until_ts_ms / 1000
+        now_iso = datetime.fromtimestamp(end_s, tz=UTC).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
 
@@ -742,7 +780,7 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                         "Event fetch for device %s returned HTTP %s — skipping",
                         device_id, resp.status,
                     )
-                    return []
+                    return None
                 data = await resp.json()
                 # The API always returns a dict. Events are under the "message"
                 # key. When no events exist in the time window, "message" is
@@ -765,13 +803,87 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                     "Unexpected event response shape for device %s: %s",
                     device_id, type(data),
                 )
-                return []
+                return None
         except (aiohttp.ClientError, TimeoutError) as err:
             _LOGGER.debug(
                 "Event fetch for device %s failed: %s — skipping",
                 device_id, str(err) or type(err).__name__,
             )
-            return []
+            return None
+
+    async def _seed_event_sensor_cache(self, pp_device_id: str) -> None:
+        """Silently seed the event sensor cache from the recent event history.
+
+        orientation and wifi_rssi are only reported in activate events. After
+        an HA restart or integration reload the cache is empty and the normal
+        event window only covers the last poll interval, so both sensors
+        would stay unknown until the frame's next wake-up (up to one day).
+
+        This runs once per device and session: it looks back in the stages
+        of _SEED_WINDOWS_SECONDS (each stage only fetches the older slice not
+        yet covered) and takes the newest activate event. It deliberately
+        fires no HA bus events (so no logbook entries or automation triggers)
+        and does not touch _last_event_poll_ts — normal polling continues
+        exactly as before.
+
+        On an API error the device is not marked as seeded, so the next poll
+        retries. If no activate event exists within the longest window, the
+        device is marked as seeded anyway to avoid fetching on every poll.
+        """
+        now_ms = int(time.time() * 1000)
+        until_ts_ms: int | None = None  # first stage ends "now"
+
+        for window_s in _SEED_WINDOWS_SECONDS:
+            since_ts_ms = now_ms - window_s * 1000
+            raw_events = await self._fetch_device_events(
+                pp_device_id, since_ts_ms, until_ts_ms
+            )
+            if raw_events is None:
+                # API failure — retry the whole seeding on the next poll
+                _LOGGER.debug(
+                    "Event cache seeding for device %s failed — retrying next poll",
+                    pp_device_id,
+                )
+                return
+
+            activates = [
+                e
+                for e in (self._parse_device_event(r) for r in raw_events)
+                if e is not None and e["type"] == "activate"
+            ]
+            if activates:
+                latest = max(activates, key=lambda e: e["timestamp_ms"])
+                self._event_sensor_cache[pp_device_id] = {
+                    "wifi_rssi": latest.get("wifi_rssi"),
+                    "orientation": latest.get("orientation"),
+                    # When the frame last reported in — shows how old the
+                    # orientation / WiFi values are ("Last wake-up" sensor)
+                    "last_wakeup": self._ms_timestamp_to_datetime(
+                        latest["timestamp_ms"]
+                    ),
+                }
+                self._event_seed_done.add(pp_device_id)
+                _LOGGER.debug(
+                    "Event sensor cache seeded for device %s from activate at "
+                    "ts=%d (window %d h): wifi_rssi=%s orientation=%s",
+                    pp_device_id,
+                    latest["timestamp_ms"],
+                    window_s // 3600,
+                    latest.get("wifi_rssi"),
+                    latest.get("orientation"),
+                )
+                return
+
+            # Next stage only covers the older slice before this window
+            until_ts_ms = since_ts_ms
+
+        self._event_seed_done.add(pp_device_id)
+        _LOGGER.debug(
+            "No activate event within %d days for device %s — "
+            "event sensors stay empty until the next wake-up",
+            _SEED_WINDOWS_SECONDS[-1] // 86400,
+            pp_device_id,
+        )
 
     async def _process_device_events(
         self,
@@ -872,6 +984,10 @@ class PaperlessCoordinator(DataUpdateCoordinator):
             self._event_sensor_cache[pp_device_id] = {
                 "wifi_rssi": latest_activate.get("wifi_rssi"),
                 "orientation": latest_activate.get("orientation"),
+                # Timestamp of this activate event ("Last wake-up" sensor)
+                "last_wakeup": self._ms_timestamp_to_datetime(
+                    latest_activate["timestamp_ms"]
+                ),
             }
             _LOGGER.debug(
                 "Event sensor cache updated for device %s: wifi_rssi=%s orientation=%s",
@@ -1046,6 +1162,16 @@ class PaperlessCoordinator(DataUpdateCoordinator):
                     self._last_known_fw_version[device_id] = ping_data["fw_version"]
                 elif device_id in self._last_known_fw_version:
                     device["fw_version"] = self._last_known_fw_version[device_id]
+
+                # First poll of this device in this session: silently seed
+                # the event sensor cache from the event history, so
+                # orientation and wifi_rssi are known right after startup
+                # instead of after the next wake-up. Independent of the
+                # reachable flag — the last known values are still useful
+                # while the frame sleeps. Runs before the cache is applied so
+                # the seeded values land in this very refresh.
+                if device_id not in self._event_seed_done:
+                    await self._seed_event_sensor_cache(device_id)
 
                 # Apply cached event sensor values (wifi_rssi, orientation)
                 # from previous activate events. These survive poll cycles so
