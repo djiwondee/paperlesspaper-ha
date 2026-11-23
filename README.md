@@ -306,7 +306,24 @@ Upload a specific image to an ePaper display. Each call uploads exactly the pict
 
 By default the paperlesspaper server converts every uploaded picture for the ePaper display (resizing, rotation, dithering to the panel's colors). If you produce device-ready images yourself — for example with your own dithering software — enable **Pre-dithered images** so the image is uploaded as the API's device-ready `pictureDevice` file instead of the regular `picture` and is not processed again. Leave it off for normal photos.
 
-> **Note:** The integration cannot verify that an image really is device-ready. Only enable the option for images that match what your frame expects (pixel size, orientation, color palette).
+> **Note:** The integration cannot verify that an image really is device-ready, and it does **not** resize, rotate or convert the file. Only enable the option for images that match what your frame expects, as described below.
+
+**Preparing a device-ready image.** According to the paperlesspaper API documentation (proposed in [paperlesspaper-web#207](https://github.com/paperlesspaper/paperlesspaper-web/pull/207) and [paperlesspaper-docs#6](https://github.com/paperlesspaper/paperlesspaper-docs/pull/6), not yet released at the time of writing), a `pictureDevice` file must meet these requirements:
+
+| Requirement | Details |
+|---|---|
+| Format | PNG (recommended, JPEG compression changes pixel colors) or JPEG, a single still image, up to 10 MiB. Rotate the **pixels**; EXIF orientation is rejected |
+| Size | The **native panel size, even if the frame hangs in portrait**: Paper 7 `800 × 480`, Paper 13 `1600 × 1200` |
+| Rotation for a frame hanging in portrait | Paper 7 and Paper 13: rotate the portrait image **90° clockwise** to produce the landscape-sized file |
+| Rotation for a frame hanging in landscape | Paper 7: **180°**, Paper 13: none |
+| Colors | The API does not validate or remap colors. The six Spectra 6 colors (black, white, red, green, blue, yellow) are what the panel renders |
+
+For example, rotate a `480 × 800` portrait image 90° clockwise to get the `800 × 480` file for a Paper 7 that hangs in portrait.
+
+- **No sensor compensation.** The frame does not rotate the picture using its orientation sensor, and upside-down mounting is not covered. If you turn the frame, the picture turns with it.
+- **A wrong file can look like a success.** Until the API validates the upload, a file with the wrong size is accepted with HTTP 200 and the frame later shows `Picture download failed`. HTTP 200 never confirms that the picture is displayed. Once the validation is live, wrong files are rejected with HTTP 400, and the integration writes the message returned by the API to the log.
+- **Similar images may be skipped.** The API compares the upload with the last uploaded image and may skip it (event status `skipped`). This also applies to pre-dithered uploads.
+- **Verified so far** only on a Paper 7 hanging in portrait with 800 × 480 files rotated 90° clockwise. Treat the option as experimental, and see [Issue #45](https://github.com/djiwondee/paperlesspaper-ha/issues/45) for test results.
 
 #### reuse_existing_paper
 

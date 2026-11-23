@@ -108,7 +108,7 @@
         },
         "pre_dithered": {
           "name": "Předem ditherovaný obrázek",
-          "description": "Zapněte, pokud je obrázek již ditherovaný pro displej. Nahraje se jako obrázek připravený pro zařízení a server paperlesspaper přeskočí vlastní zpracování obrázku. U běžných fotografií ponechte vypnuto."
+          "description": "Zapněte, pokud je obrázek již ditherovaný pro displej. Nahraje se beze změny jako obrázek připravený pro zařízení, takže musí být PNG nebo JPEG v nativní velikosti rámečku a již správně otočený (viz README). U běžných fotografií ponechte vypnuto."
         }
       }
     },
@@ -134,7 +134,7 @@
         },
         "pre_dithered": {
           "name": "Předem ditherované obrázky",
-          "description": "Zapněte, pokud jsou obrázky již ditherované pro displej. Platí to pro VŠECHNY obrázky vybrané z mediální složky, protože integrace nemůže ověřit, jak vznikly. Server paperlesspaper pak přeskočí vlastní zpracování obrázku. U běžných fotografií ponechte vypnuto."
+          "description": "Zapněte, pokud jsou obrázky již ditherované pro displej. Platí to pro VŠECHNY obrázky vybrané z mediální složky, protože integrace nemůže ověřit, jak vznikly. Každý obrázek se nahraje beze změny, takže musí být PNG nebo JPEG v nativní velikosti rámečku a již správně otočený (viz README). U běžných fotografií ponechte vypnuto."
         }
       }
     }

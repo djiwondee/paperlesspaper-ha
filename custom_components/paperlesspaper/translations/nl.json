@@ -108,7 +108,7 @@
         },
         "pre_dithered": {
           "name": "Vooraf geditherde afbeelding",
-          "description": "Schakel in als de afbeelding al is gedithered voor het scherm. Ze wordt geüpload als apparaatklare afbeelding en de paperlesspaper-server slaat zijn eigen beeldverwerking over. Laat uit voor gewone foto's."
+          "description": "Schakel in als de afbeelding al is gedithered voor het scherm. Ze wordt ongewijzigd geüpload als apparaatklare afbeelding en moet daarom een PNG of JPEG zijn in de native resolutie van de lijst en al correct gedraaid (zie de README). Laat uit voor gewone foto's."
         }
       }
     },
@@ -134,7 +134,7 @@
         },
         "pre_dithered": {
           "name": "Vooraf geditherde afbeeldingen",
-          "description": "Schakel in als de afbeeldingen al zijn gedithered voor het scherm. Dit geldt voor ALLE afbeeldingen die uit de mediamap worden gekozen, omdat de integratie niet kan controleren hoe ze zijn gemaakt. De paperlesspaper-server slaat dan zijn eigen beeldverwerking over. Laat uit voor gewone foto's."
+          "description": "Schakel in als de afbeeldingen al zijn gedithered voor het scherm. Dit geldt voor ALLE afbeeldingen die uit de mediamap worden gekozen, omdat de integratie niet kan controleren hoe ze zijn gemaakt. Elke afbeelding wordt ongewijzigd geüpload en moet daarom een PNG of JPEG zijn in de native resolutie van de lijst en al correct gedraaid (zie de README). Laat uit voor gewone foto's."
         }
       }
     }

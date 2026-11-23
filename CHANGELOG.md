@@ -9,7 +9,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Planned as 2.2.0 (`manifest.json` already carries that version). Not released as a stable version
 yet: the `pre_dithered` option is only available in the pre-release `v2.2.0b`, because the
-paperlesspaper backend/firmware behaviour for `pictureDevice` is still unclear (Issue #45).
+paperlesspaper API validation and documentation for `pictureDevice` (paperlesspaper-web#207,
+paperlesspaper-docs#6) are not released yet (Issue #45).
 Pre-release `v2.2.0b1` adds the startup seeding of the event sensors and the "Last wake-up"
 sensor on top of `v2.2.0b`.
 
@@ -33,6 +34,12 @@ sensor on top of `v2.2.0b`.
 
 ### Changed
 
+- `pre_dithered` documentation: the action descriptions (`services.yaml`, `strings.json` and all
+  7 translations) and the README now state that the image is uploaded unchanged and must be a
+  PNG or JPEG in the frame's native size (Paper 7: 800 × 480, even when hanging in portrait) and
+  already rotated. The README lists the rotation rules, the missing sensor compensation and the
+  similarity skip as described in the paperlesspaper API documentation proposed in
+  paperlesspaper-web#207 and paperlesspaper-docs#6, and marks the option as experimental.
 - `upload_random_image`: `max_images` is marked `required` in `services.yaml` so the action dialog
   no longer shows a redundant "include field" checkbox next to it (the value `0` is the default
   and the handler still treats the field as optional).
