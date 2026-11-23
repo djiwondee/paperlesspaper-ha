@@ -40,8 +40,9 @@ upload_image:
       name: Pre-dithered image
       description: >
         Enable if the image is already dithered for the display. It is
-        uploaded as a device-ready image and the paperlesspaper server skips
-        its own image processing. Leave off for normal photos.
+        uploaded unchanged as a device-ready image, so it must be a PNG or
+        JPEG in the frame's native size and already rotated accordingly (see
+        the README). Leave off for normal photos.
       required: true
       default: false
       example: false
@@ -108,8 +109,9 @@ upload_random_image:
       description: >
         Enable if the images are already dithered for the display. This
         applies to ALL images picked from the media folder, because the
-        integration cannot check how they were created. The paperlesspaper
-        server then skips its own image processing. Leave off for normal
+        integration cannot check how they were created. Each one is uploaded
+        unchanged, so it must be a PNG or JPEG in the frame's native size and
+        already rotated accordingly (see the README). Leave off for normal
         photos.
       required: true
       default: false
