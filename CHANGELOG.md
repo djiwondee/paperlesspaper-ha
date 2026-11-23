@@ -40,6 +40,22 @@ sensor on top of `v2.2.0b`.
 - HTTP 4xx responses of the upload endpoint now log the response body, which usually names the
   reason (previously discarded).
 
+### Fixed
+
+- `upload_image` and `upload_random_image` failed with "No such file or directory" for images
+  from media sources other than "My media", such as Immich or Synology Photos (Issue #54). These
+  sources resolve to a relative Home Assistant URL (e.g. `/immich/...`), which was read as a local
+  file. Relative URLs are now signed, made absolute with Home Assistant's own URL and fetched over
+  HTTP. If Home Assistant has no internal or external URL configured, the action fails with a
+  clear error.
+- Local media files are now read from the path the media source reports, instead of rewriting
+  `/media/local/` to `/media/`. The rewrite only worked when "My media" lives in `/media` (Home
+  Assistant OS) and failed for custom `media_dirs`.
+- Image fetches over HTTP use the media source's MIME type when the server sends no image
+  `Content-Type` (e.g. `application/octet-stream`), and a timeout during the fetch now fires the
+  `status: failed` event like any other fetch error. Signed Home Assistant URLs are not written to
+  logs, errors or events; the `media_content_id` is reported instead.
+
 ## [2.1.5] - 2026-11-09
 
 ### Fixed
