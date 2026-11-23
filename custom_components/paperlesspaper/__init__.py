@@ -117,6 +117,25 @@
 #                    every image of the directory. Default behaviour is
 #                    unchanged. 4xx response bodies and the upload response
 #                    fields uploadFailed and reason are now logged.
+# 2026-11-23  2.2.0  Issue #54 (Captainmarci104): images from media sources
+#                    other than "My media" (Immich, Synology Photos, ...)
+#                    failed with "No such file or directory", because every
+#                    resolved URL not starting with "http" was read as a
+#                    file. _fetch_media_source now branches on what the
+#                    media source actually returns:
+#                    - PlayMedia.path set -> read that file from disk. This
+#                      also replaces the "/media/local/" -> "/media/" rewrite,
+#                      which only worked when "My media" lives in /media
+#                      (HA OS) and broke custom media_dirs.
+#                    - absolute http(s) URL -> fetched as before.
+#                    - relative URL (HA endpoint such as /immich/...) ->
+#                      signed and made absolute via
+#                      async_process_play_media_url, then fetched over HTTP.
+#                    - anything else -> clear HomeAssistantError.
+#                    _fetch_http strips Content-Type parameters, falls back
+#                    to the media source's MIME type when the header is not
+#                    image/*, and now also catches TimeoutError so a slow
+#                    fetch still fires the status: failed event.
 # =============================================================================
 
 from __future__ import annotations
@@ -129,6 +148,9 @@ import random
 import aiofiles
 import aiohttp
 from homeassistant.components import persistent_notification
+from homeassistant.components.media_player.browse_media import (
+    async_process_play_media_url,
+)
 from homeassistant.components.media_source import (
     BrowseMediaSource,
     async_browse_media,
@@ -743,50 +765,102 @@ async def _fetch_media_source(
             f"Could not resolve media source '{media_content_id}': {err}"
         ) from err
 
-    _LOGGER.debug("Resolved media URL: %s", media_url)
+    _LOGGER.debug("Resolved media URL: %s (path=%s)", media_url, media.path)
 
-    if not media_url.startswith("http"):
-        # Fix path: /media/local/ -> /media/
-        media_url = media_url.replace("/media/local/", "/media/")
-        # Local file — read directly from filesystem (no auth needed)
+    # Case 1: the media source tells us where the file lives on disk
+    # (local_source / "My media", image_upload, ...). Read it directly instead
+    # of guessing the path from the URL — media_dirs can point anywhere.
+    if media.path is not None:
         try:
-            async with aiofiles.open(media_url, "rb") as f:
+            async with aiofiles.open(media.path, "rb") as f:
                 image_data = await f.read()
         except OSError as err:
             _LOGGER.error("Failed to read image file %s: %s", media_content_id, err)
             raise HomeAssistantError(
                 f"Could not read image file '{media_content_id}': {err}"
             ) from err
-        else:
-            content_type = mimetypes.guess_type(media_url)[0] or "image/jpeg"
-            _LOGGER.debug(
-                "Read image from filesystem %s: %d bytes, type=%s",
-                media_url, len(image_data), content_type,
-            )
-            return image_data, content_type
+        content_type = (
+            media.mime_type
+            or mimetypes.guess_type(str(media.path))[0]
+            or "image/jpeg"
+        )
+        _LOGGER.debug(
+            "Read image from filesystem %s: %d bytes, type=%s",
+            media.path, len(image_data), content_type,
+        )
+        return image_data, content_type
 
-    # External URL resolved from media source
-    return await _fetch_http(session, media_url)
+    # Case 2: relative URL. This is an HTTP endpoint served by Home Assistant
+    # itself (e.g. /immich/... or /synology_dsm/...), NOT a file. Sign it and
+    # turn it into an absolute URL so it can be fetched like any other URL.
+    if media_url.startswith("/"):
+        try:
+            media_url = async_process_play_media_url(hass, media_url)
+        except HomeAssistantError as err:
+            # Raised when HA has no internal/external URL configured.
+            _LOGGER.error(
+                "Could not build a URL for media source %s: %s", media_content_id, err
+            )
+            raise HomeAssistantError(
+                f"Could not build a Home Assistant URL for '{media_content_id}': {err}"
+            ) from err
+
+    # Case 3: absolute HTTP(S) URL (external, or the signed HA URL from case 2).
+    if media_url.startswith(("http://", "https://")):
+        # The signed URL carries an auth token: report the media_content_id
+        # in logs, errors and events instead of the URL itself.
+        return await _fetch_http(
+            session,
+            media_url,
+            fallback_content_type=media.mime_type,
+            label=media_content_id,
+        )
+
+    # Anything else (other schemes, bare relative paths) is not supported —
+    # never hand it to the filesystem.
+    _LOGGER.error(
+        "Unsupported resolved media URL for %s: %s", media_content_id, media_url
+    )
+    raise HomeAssistantError(
+        f"Unsupported resolved media URL for '{media_content_id}': {media_url}"
+    )
 
 
 async def _fetch_http(
     session: aiohttp.ClientSession,
     url: str,
+    fallback_content_type: str | None = None,
+    label: str | None = None,
 ) -> tuple[bytes, str]:
-    """Fetch image bytes from an HTTP/HTTPS URL."""
+    """Fetch image bytes from an HTTP/HTTPS URL.
+
+    The Content-Type header is used without parameters (e.g. "; charset=").
+    When it is missing or not an image type (some sources send
+    application/octet-stream), fallback_content_type is used if given,
+    otherwise image/jpeg. label replaces the URL in log lines and error
+    messages (used for signed Home Assistant URLs).
+    """
+    name = label or url
     try:
         async with session.get(url) as resp:
             resp.raise_for_status()
             image_data = await resp.read()
-            content_type = resp.headers.get("Content-Type", "image/jpeg")
+            header_type = (
+                resp.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            )
+            if header_type.startswith("image/"):
+                content_type = header_type
+            else:
+                content_type = fallback_content_type or "image/jpeg"
             _LOGGER.debug(
-                "Fetched image from %s: %d bytes, type=%s",
-                url, len(image_data), content_type,
+                "Fetched image from %s: %d bytes, type=%s (header=%s)",
+                name, len(image_data), content_type, header_type or "-",
             )
             return image_data, content_type
-    except aiohttp.ClientError as err:
-        _LOGGER.error("Failed to fetch image from %s: %s", url, err)
-        raise HomeAssistantError(f"Could not fetch image '{url}': {err}") from err
+    # aiohttp.ClientTimeout raises TimeoutError, which is not a ClientError.
+    except (aiohttp.ClientError, TimeoutError) as err:
+        _LOGGER.error("Failed to fetch image from %s: %s", name, err)
+        raise HomeAssistantError(f"Could not fetch image '{name}': {err}") from err
 
 
 async def _upload_to_api(
